@@ -14,15 +14,19 @@
 #define POP_COUNT   50
 #define MAX_GEN     50
 
+typedef struct _ff
+{
+	size_t nparams;
+	double *params;
+} ffly;
+
 /* 
     Our type declarations
 */
 typedef struct _ffp
 {
 	size_t nfflies;
-	double *x_values;
-	double *y_values;
-	double *light_values;
+	ffly *flies;
 } ffly_population;
 
 /* 

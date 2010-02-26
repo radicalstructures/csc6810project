@@ -2,6 +2,7 @@
 
 static void move_fflies(ffly_population *pop, const ffly_population *pop_old, 
                 double alpha, double gamma, point min, point max);
+static void memcpy_fflies(ffly_population *fflies_old, ffly_population *dest);
 static void fix_positions(ffly_population *pop, point min, point max);
 static void output_points(ffly_population *pop, const char *fname);
 static void sort_flies(ffly_population *pop, int left, int right);
@@ -14,29 +15,25 @@ static void print_fflies(ffly_population *pop);
 	This creates our firefly population and assigns random positions.
 */
 ffly_population*
-init_fflies(size_t ncount, point min, point max)
+init_fflies(size_t ncount, size_t nparams, double[] mins, double[] maxs)
 {
-	register unsigned int i = 0;
-	double xrange, yrange;
+	register unsigned int i = 0, j = 0;
 	ffly_population *pop = NULL;
 	
 	//create memory chunks for values
 	pop = malloc(sizeof(ffly_population));
 	pop->nfflies = ncount;
-	pop->x_values = calloc(ncount, sizeof(double));
-	pop->y_values = calloc(ncount, sizeof(double));
-	pop->light_values = calloc(ncount, sizeof(double));
-	
-	//get range
-	xrange = max.x - min.x;
-	yrange = max.y - min.y;
+	pop->flies = calloc(ncount, sizeof(ffly));
 	
 	//init random positions and zero out light value
 	for (i=0; i < ncount; i++)
 	{
-		pop->x_values[i] = my_rand()*xrange + min.x;
-		pop->y_values[i] = my_rand()*yrange + min.y;
-		pop->light_values[i] = 0.0;
+		pop->flies[i].params = calloc(nparams, sizeof(double));
+		pop->flies[i].nparams = nparams;
+		for (j=0; j < nparams; j++)
+		{
+			pop->flies[i].params[j] = my_rand()*(maxs[j]-mins[j]) + mins[j];
+		}
 	}
 	
 	return pop;	
@@ -48,9 +45,12 @@ init_fflies(size_t ncount, point min, point max)
 void
 destroy_fflies(ffly_population *pop)
 {
-	free(pop->x_values);
-	free(pop->y_values);
-	free(pop->light_values);
+	register unsigned int i = 0;
+	for (i = 0; i < pop->nfflies; i++)
+	{
+		free(pop->flies[i].params);
+	}
+	free(pop->flies);
 	free(pop);
 
 	return;
@@ -67,8 +67,8 @@ ffa(size_t nfireflies, size_t niteration, point min, point max, obj_func f)
 	ffly_population *fflies = NULL;
 	ffly_population *fflies_old = NULL;
 
-	double alpha = 0.2; //randomness step
-	double gamma = 1.0; //absorption coefficient
+	const double alpha = 0.01; //randomness step
+	const double gamma = 0.8; //absorption coefficient
 	
 	//initialize our RNG
 	srand(time(NULL));
@@ -85,15 +85,12 @@ ffa(size_t nfireflies, size_t niteration, point min, point max, obj_func f)
 	for (i=0; i < niteration; i++)
 	{
 		//keep another copy for move function
-		memcpy(fflies_old->x_values, fflies->x_values, size);
-		memcpy(fflies_old->y_values, fflies->y_values, size);
-		memcpy(fflies_old->light_values, fflies->light_values, size);
+		memcyp_fflies(fflies_old, fflies);
 		
 		//evaluate intensity/attractiveness
 		(*f)(fflies);
         
         //rank our flies
-        //sort_flies(fflies, 0, fflies->nfflies);
         
         //move the flies based on attractiveness
 		move_fflies(fflies, fflies_old, alpha, gamma, min, max);
@@ -101,6 +98,17 @@ ffa(size_t nfireflies, size_t niteration, point min, point max, obj_func f)
 	output_points(fflies, "end.dat");
 	
 	return p;
+};
+
+/* 
+    Use this to copy a set of fireflies to a new set 
+*/
+static void
+memcpy_fflies(ffly_population *fflies_old, ffly_population *dest)
+{
+    memcpy(fflies_old->x_values, dest->x_values, size);
+	memcpy(fflies_old->y_values, dest->y_values, size);
+	memcpy(fflies_old->light_values, dest->light_values, size);
 };
 
 /*
@@ -159,6 +167,20 @@ move_fflies(ffly_population *pop, const ffly_population *pop_old, double alpha, 
 	
 	//fix boundaries overstepped by random step
 	fix_positions(pop, min, max);
+};
+
+/*
+    Our acceptance probability function for Simulated Annealing
+*/
+static double
+prob_func(double e, double eprime, double T)
+{
+    double result = 1.0;
+    if (eprime >= e)
+    {
+        result = exp((e - eprime) / T);
+    }
+    return result;
 };
 
 /* 
