@@ -1,9 +1,9 @@
-CFLAGS = -Wall
+CFLAGS = -Wall -fopenmp -lm
 CC = gcc 
 
 all :
-	$(CC) main.c firefly.c point.c -lm -fopenmp -o fflies
+	$(CC) $(CFLAGS) main.c firefly.c point.c  -o fflies
 debug :
-	$(CC) main.c firefly.c point.c -lm -g -fopenmp -o fflies
+	$(CC) $(CFLAGS) main.c firefly.c point.c  -g -o fflies
 clean :
 	rm main.o firefly.o point.o
