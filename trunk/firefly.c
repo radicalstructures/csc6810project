@@ -1,7 +1,7 @@
 #include "firefly.h"
 
 static void move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f, double alpha, double gamma, double mins[], double maxs[]);
-static void move_fly(ffly *fly, ffly *old, obj_func f, double distances[], size_t nparams, double alpha, double gamma);
+static void move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams, const double alpha, const double gamma);
 static void memcpy_fflies(ffly_population *fflies_old, ffly_population *dest);
 static void memcpy_ffly(ffly *fly, ffly *dest, size_t nparams);
 static double calc_distance(double *dest, size_t nparams, const ffly *fly, const ffly *fly_old);
@@ -56,14 +56,12 @@ destroy_fflies(ffly_population *pop)
     return;
 };
 
-point
+void
 ffa(size_t nfireflies, size_t niteration, size_t nparams, double mins[], double maxs[],
     obj_func f)
 {
 
     register unsigned int i = 0;
-    point p;
-    size_t size = 0;
     ffly_population *fflies = NULL;
     ffly_population *fflies_old = NULL;
 
@@ -79,13 +77,11 @@ ffa(size_t nfireflies, size_t niteration, size_t nparams, double mins[], double 
     //initialize our old firefly array
     fflies_old = init_fflies(nfireflies, nparams, mins, maxs);
 
-    size = sizeof(double) * nfireflies;
-
     output_points(fflies, "start.dat");
     for (i=0; i < niteration; i++)
     {
         //keep another copy for move function
-        memcpy_fflies(fflies, fflies_old);
+        memcpy_fflies(fflies_old, fflies);
 
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
@@ -94,8 +90,7 @@ ffa(size_t nfireflies, size_t niteration, size_t nparams, double mins[], double 
 
     destroy_fflies(fflies);
     destroy_fflies(fflies_old);
-    
-    return p;
+    return;    
 };
 
 /*
@@ -155,31 +150,27 @@ move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
 
     size_t nflies = pop->nfflies;
     size_t nparams = pop->nparams;
-    double *distances = (double*)calloc(nparams, sizeof(double));
 
     for (i=0; i < nflies; i++)
     {
-#pragma parallel for private(i)
+	#pragma omp parallel for private(i)
         for (j = 0; j < nflies; j++)
         {
-            if (j != i)
-            {
-                move_fly(&pop->flies[i], &pop_old->flies[j], f, distances, pop->nparams, alpha, gamma);
-            }
+                move_fly(&pop->flies[i], &pop_old->flies[j], f, nparams, alpha, gamma);
         }
     }
 
     //fix boundaries overstepped by random step
     fix_positions(pop, mins, maxs);
-    free(distances);
     return;
 };
 
 static void
-move_fly(ffly *fly, ffly *old, obj_func f, double distances[], size_t nparams, double alpha, double gamma)
+move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams, const double alpha, const double gamma)
 {
     unsigned register int i = 0;
     const double beta0 = 1.0;
+    double distances[512] = {0};
     double ilight = (*f)(fly);
     double jlight = (*f)(old);
 

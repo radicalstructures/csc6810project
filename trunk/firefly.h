@@ -49,6 +49,6 @@ destroy_fflies(ffly_population *pop);
 /*
     Our main function
 */
-point 
+void 
 ffa(size_t nfireflies, size_t niteration, size_t nparams, double mins[], double maxs[], obj_func f);
 
