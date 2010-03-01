@@ -8,22 +8,35 @@
 #include <unistd.h>
 #include "firefly.h"
 
+#define PI 3.14159265
+#define E 2.71828183
+
+#define N_ACKLEY 128
+#define F_ACKLEY 128.0
 /*
     Our function declarations
 */
 
 
 double our_func(ffly *fly);
+double akley(ffly *fly);
 
 int
 main(int argc, char **argv)
 {
-    point p;
-    double mins[] = { -5.0, -5.0 };
-    double maxs[] = { 5.0, 5.0 };
+    double *mins = calloc(N_ACKLEY, sizeof(double));
+    double *maxs = calloc(N_ACKLEY, sizeof(double));
+    
     char c;
     size_t pop_count = POP_COUNT, max_gen = MAX_GEN;
-
+    size_t i = 0;
+    
+    for (i=0; i < N_ACKLEY; i++)
+    {
+        mins[i] = -32.768;
+        maxs[i] = 32.768;
+    }
+    
     while ( (c = getopt(argc, argv, "n:g:")) != -1)
     {
         switch (c)
@@ -43,10 +56,10 @@ main(int argc, char **argv)
         }
     }
 
-    p = ffa(pop_count, max_gen, 2, mins, maxs, &our_func);
-
-    printf("Max x: %.2lf, Max y %.2lf\n", p.x, p.y);
-
+    ffa(pop_count, max_gen, N_ACKLEY, mins, maxs, &akley);
+    free(mins);
+    free(maxs);
+    
     return EXIT_SUCCESS;
 };
 
@@ -65,6 +78,23 @@ our_func(ffly *fly)
     return z;
 };
 
+
+
+double
+akley(ffly *fly)
+{
+    unsigned register int i = 0;
+    
+    double sumsq = 0.0, sumcos = 0.0;
+    for (i = 0; i < N_ACKLEY; i++)
+    {
+        sumsq += fly->params[i] * fly->params[i];
+        sumcos += cos(2 * PI * fly->params[i]);
+    }
+    return 20 * exp(-0.2*sqrt((1.0/F_ACKLEY) * sumsq)) - 
+            exp((1.0/F_ACKLEY)*sumcos) + 20 + E;
+};
+        
 
 
 
