@@ -32,7 +32,7 @@ typedef struct _ffp
 /* 
     This will allow for different functions to be passed in for evaluation
 */
-typedef double (obj_func)(ffly*);
+typedef double (obj_func)(const ffly*);
 
 /* 
     This will initiate a population of fireflies

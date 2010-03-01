@@ -18,14 +18,14 @@
 */
 
 
-double our_func(ffly *fly);
-double akley(ffly *fly);
+double our_func(const ffly *fly);
+double akley(const ffly *fly);
 
 int
 main(int argc, char **argv)
 {
-    double *mins = (double*)calloc(N_ACKLEY, sizeof(double));
-    double *maxs = (double*)calloc(N_ACKLEY, sizeof(double));
+    double mins[N_ACKLEY] = {0.0};
+    double maxs[N_ACKLEY] = {0.0};
     
     char c;
     size_t pop_count = POP_COUNT, max_gen = MAX_GEN;
@@ -57,14 +57,12 @@ main(int argc, char **argv)
     }
 
     ffa(pop_count, max_gen, N_ACKLEY, mins, maxs, &akley);
-    free(mins);
-    free(maxs);
     
     return EXIT_SUCCESS;
 };
 
 double
-our_func(ffly *fly)
+our_func(const ffly *fly)
 {   
     double x, y, z;
     
@@ -81,7 +79,7 @@ our_func(ffly *fly)
 
 
 double
-akley(ffly *fly)
+akley(const ffly *fly)
 {
     unsigned register int i = 0;
     
