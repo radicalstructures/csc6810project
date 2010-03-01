@@ -20,15 +20,15 @@ init_fflies(size_t ncount, size_t nparams, double mins[], double maxs[])
     ffly_population *pop = NULL;
 
     //create memory chunks for values
-    pop = malloc(sizeof(ffly_population));
+    pop = (ffly_population*)malloc(sizeof(ffly_population));
     pop->nfflies = ncount;
     pop->nparams = nparams;
-    pop->flies = calloc(ncount, sizeof(ffly));
+    pop->flies = (ffly*)calloc(ncount, sizeof(ffly));
 
     //init random positions and zero out light value
     for (i=0; i < ncount; i++)
     {
-        pop->flies[i].params = calloc(nparams, sizeof(double));
+        pop->flies[i].params = (double*)calloc(nparams, sizeof(double));
         for (j=0; j < nparams; j++)
         {
             pop->flies[i].params[j] = my_rand()*(maxs[j]-mins[j]) + mins[j];
@@ -62,9 +62,7 @@ ffa(size_t nfireflies, size_t niteration, size_t nparams, double mins[], double 
 {
 
     register unsigned int i = 0;
-    unsigned register int j = 0;
     point p;
-    double lmin = FLT_MAX;
     size_t size = 0;
     ffly_population *fflies = NULL;
     ffly_population *fflies_old = NULL;
@@ -87,13 +85,16 @@ ffa(size_t nfireflies, size_t niteration, size_t nparams, double mins[], double 
     for (i=0; i < niteration; i++)
     {
         //keep another copy for move function
-        memcpy_fflies(fflies_old, fflies);
+        memcpy_fflies(fflies, fflies_old);
 
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
     }
     output_points(fflies, "end.dat");
 
+    destroy_fflies(fflies);
+    destroy_fflies(fflies_old);
+    
     return p;
 };
 
@@ -102,24 +103,24 @@ ffa(size_t nfireflies, size_t niteration, size_t nparams, double mins[], double 
     Use this to copy a set of fireflies to a new set
 */
 static void
-memcpy_fflies(ffly_population *fflies_old, ffly_population *dest)
+memcpy_fflies(ffly_population *dest, ffly_population *fflies_old)
 {
     register int i = 0;
 
-    memcpy(fflies_old->flies, dest->flies, sizeof(ffly)*fflies_old->nfflies);
+    memcpy(dest->flies, fflies_old->flies, sizeof(ffly)*(fflies_old->nfflies));
     dest->nfflies = fflies_old->nfflies;
     dest->nparams = fflies_old->nparams;
 
     for (i = 0 ; i < fflies_old->nfflies; i++)
     {
-        memcpy_ffly(&fflies_old->flies[i], &dest->flies[i], dest->nparams);
+        memcpy_ffly(&dest->flies[i], &fflies_old->flies[i], dest->nparams);
     }
 };
 
 static void
-memcpy_ffly(ffly *fly, ffly *dest, size_t nparams)
+memcpy_ffly(ffly *dest, ffly *fly, size_t nparams)
 {
-    memcpy(fly->params, dest->params, sizeof(double) * nparams);
+    memcpy(dest->params, fly->params, sizeof(double) * nparams);
 };
 
 /*
@@ -151,12 +152,11 @@ static void
 move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
             double alpha, double gamma, double *mins, double *maxs)
 {
-    unsigned register int i = 0, j = 0, k = 0;
+    unsigned register int i = 0, j = 0;
 
-    double r = 0.0;
     size_t nflies = pop->nfflies;
     size_t nparams = pop->nparams;
-    double *distances = calloc(nparams, sizeof(double));
+    double *distances = (double*)calloc(nparams, sizeof(double));
 
     for (i=0; i < nflies; i++)
     {

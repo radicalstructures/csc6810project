@@ -24,8 +24,8 @@ double akley(ffly *fly);
 int
 main(int argc, char **argv)
 {
-    double *mins = calloc(N_ACKLEY, sizeof(double));
-    double *maxs = calloc(N_ACKLEY, sizeof(double));
+    double *mins = (double*)calloc(N_ACKLEY, sizeof(double));
+    double *maxs = (double*)calloc(N_ACKLEY, sizeof(double));
     
     char c;
     size_t pop_count = POP_COUNT, max_gen = MAX_GEN;
