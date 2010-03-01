@@ -153,7 +153,7 @@ move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
 
     for (i=0; i < nflies; i++)
     {
-	#pragma omp parallel for private(i)
+	#pragma omp parallel for 
         for (j = 0; j < nflies; j++)
         {
                 move_fly(&pop->flies[i], &pop_old->flies[j], f, nparams, alpha, gamma);
