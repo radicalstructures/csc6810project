@@ -107,7 +107,6 @@ memcpy_fflies(ffly_population *dest, ffly_population *fflies_old)
 {
     register int i = 0;
 
-    memcpy(dest->flies, fflies_old->flies, sizeof(ffly)*(fflies_old->nfflies));
     dest->nfflies = fflies_old->nfflies;
     dest->nparams = fflies_old->nparams;
 
