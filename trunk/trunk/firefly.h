@@ -16,7 +16,6 @@
 
 typedef struct _ff
 {
-	size_t nparams;
 	double *params;
 } ffly;
 
@@ -26,19 +25,20 @@ typedef struct _ff
 typedef struct _ffp
 {
 	size_t nfflies;
+	size_t nparams;
 	ffly *flies;
 } ffly_population;
 
 /* 
     This will allow for different functions to be passed in for evaluation
 */
-typedef void (obj_func)(ffly_population*);
+typedef double (obj_func)(ffly*);
 
 /* 
     This will initiate a population of fireflies
 */
 ffly_population* 
-init_fflies(size_t ncount, point min, point max);
+init_fflies(size_t ncount, size_t nparams, double mins[], double maxs[]);
 
 /*
     Use this to clean up your population
@@ -50,5 +50,5 @@ destroy_fflies(ffly_population *pop);
     Our main function
 */
 point 
-ffa(size_t nfireflies, size_t niteration, point min, point max, obj_func f);
+ffa(size_t nfireflies, size_t niteration, size_t nparams, double mins[], double maxs[], obj_func f);
 
