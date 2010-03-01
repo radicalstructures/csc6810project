@@ -3,6 +3,7 @@
 static void move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f, double alpha, double gamma, double mins[], double maxs[]);
 static void move_fly(ffly *fly, ffly *old, obj_func f, double distances[], size_t nparams, double alpha, double gamma);
 static void memcpy_fflies(ffly_population *fflies_old, ffly_population *dest);
+static void memcpy_ffly(ffly *fly, ffly *dest, size_t nparams);
 static double calc_distance(double *dest, size_t nparams, const ffly *fly, const ffly *fly_old);
 static void fix_positions(ffly_population *pop, double mins[], double maxs[]);
 static void output_points(ffly_population *pop, const char *fname);
@@ -68,7 +69,7 @@ ffa(size_t nfireflies, size_t niteration, size_t nparams, double mins[], double 
     ffly_population *fflies = NULL;
     ffly_population *fflies_old = NULL;
 
-    const double alpha = 0.01; //randomness step
+    const double alpha = 0.2; //randomness step
     const double gamma = 1.0; //absorption coefficient
 
     //initialize our RNG
@@ -106,13 +107,19 @@ memcpy_fflies(ffly_population *fflies_old, ffly_population *dest)
     register int i = 0;
 
     memcpy(fflies_old->flies, dest->flies, sizeof(ffly)*fflies_old->nfflies);
+    dest->nfflies = fflies_old->nfflies;
     dest->nparams = fflies_old->nparams;
 
     for (i = 0 ; i < fflies_old->nfflies; i++)
     {
-        memcpy(fflies_old->flies[i].params, dest->flies[i].params,
-               fflies_old->nparams * sizeof(double));
+        memcpy_ffly(&fflies_old->flies[i], &dest->flies[i], dest->nparams);
     }
+};
+
+static void
+memcpy_ffly(ffly *fly, ffly *dest, size_t nparams)
+{
+    memcpy(fly->params, dest->params, sizeof(double) * nparams);
 };
 
 /*
@@ -149,7 +156,7 @@ move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
     double r = 0.0;
     size_t nflies = pop->nfflies;
     size_t nparams = pop->nparams;
-    double *distances = calloc(nflies, sizeof(double));
+    double *distances = calloc(nparams, sizeof(double));
 
     for (i=0; i < nflies; i++)
     {
@@ -226,11 +233,12 @@ fix_positions(ffly_population *pop, double *mins, double *maxs)
     return;
 };
 
-static void output_points(ffly_population *pop, const char *fname)
+static void 
+output_points(ffly_population *pop, const char *fname)
 {
 
     unsigned register int i = 0, j = 0;
-    FILE *file;
+    FILE *file = NULL;
 
     file = fopen(fname, "wt");
     if (file != NULL)
