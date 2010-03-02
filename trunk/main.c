@@ -1,7 +1,7 @@
 /*
 	 Author: Nicholas Mancuso
 	 Implementation of the FireFly Algorithm to search for
-	 the optimal solution in a two variable function.
+	 the optimal solution in an n-variable function.
 	 Date: 2/4/10
  */
 
@@ -11,8 +11,6 @@
 #define PI 3.14159265
 #define E 2.71828183
 
-#define N_ACKLEY 2
-#define F_ACKLEY 2.0
 
 /*
     Our function declarations
@@ -25,19 +23,14 @@ double rosenbrock(const ffly *fly, const size_t nparams);
 int
 main(int argc, char **argv)
 {
-    double mins[N_ACKLEY] = {0.0};
-    double maxs[N_ACKLEY] = {0.0};
+    double *mins;
+    double *maxs;
+	double min=0.0, max=0.0;
     char c;
     size_t pop_count = POP_COUNT, max_gen = MAX_GEN;
-    size_t i = 0;
+    size_t i = 0, dimension = 2;
 
-    for (i=0; i < N_ACKLEY; i++)
-    {
-        mins[i] = -5.0;
-        maxs[i] =  5.0;
-    }
-    
-    while ( (c = getopt(argc, argv, "n:g:")) != -1)
+    while ( (c = getopt(argc, argv, "n:g:d:m:x:")) != -1)
     {
         switch (c)
         {
@@ -47,18 +40,38 @@ main(int argc, char **argv)
         case 'g':
             max_gen = atoi(optarg);
             break;
+        case 'd':
+            dimension = atoi(optarg);
+            break;
+        case 'm':
+            min = atof(optarg);
+            break;
+        case 'x':
+            max = atof(optarg);
+            break;
         case '?':
-            printf("FFlies usage: -n NumberOfFlies -g NumberOfGenerations\n");
+            printf("FFlies usage: -n NumberOfFlies -g NumberOfGenerations -d NumberOfDimension -m Min -x Max\n");
             return EXIT_FAILURE;
             break;
         default:
-            printf("FFlies usage: -n NumberOfFlies -g NumberOfGenerations\n");
+            printf("FFlies usage: -n NumberOfFlies -g NumberOfGenerations -d NumberOfDimension -m Min -x Max\n");
             break;
         }
     }
 
-    ffa(pop_count, max_gen, N_ACKLEY, mins, maxs, &yang);
+    mins = (double*)calloc(dimension, sizeof(double));
+	maxs = (double*)calloc(dimension, sizeof(double));
+	
+	for (i=0; i < dimension; i++)
+	{
+		mins[i] = min;
+		maxs[i] = max;
+	}
+
+	ffa(pop_count, max_gen, dimension, mins, maxs, &yang);
     
+	free(mins);
+	free(maxs);
     return EXIT_SUCCESS;
 };
 
@@ -131,5 +144,3 @@ rosenbrock(const ffly *fly, const size_t nparams)
     return 1.0 / sum;
 };
         
-
-
