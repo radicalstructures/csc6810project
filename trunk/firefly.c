@@ -16,7 +16,7 @@ static double my_rand(void);
 ffly_population*
 init_fflies(const size_t ncount, const size_t nparams, const double mins[], const double maxs[])
 {
-    register unsigned int i = 0, j = 0;
+    unsigned int i = 0, j = 0;
     ffly_population *pop = NULL;
 
     //create memory chunks for values
@@ -45,7 +45,7 @@ init_fflies(const size_t ncount, const size_t nparams, const double mins[], cons
 void
 destroy_fflies(ffly_population *pop)
 {
-    register unsigned int i = 0;
+    unsigned int i = 0;
     for (i = 0; i < pop->nfflies; i++)
     {
         free(pop->flies[i].params);
@@ -61,7 +61,7 @@ ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, cons
     obj_func f)
 {
 
-    register unsigned int i = 0;
+    unsigned int i = 0;
     ffly_population *fflies = NULL;
     ffly_population *fflies_old = NULL;
 
@@ -100,7 +100,7 @@ ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, cons
 static void
 memcpy_fflies(ffly_population *dest, ffly_population *fflies_old)
 {
-    register int i = 0;
+    unsigned int i = 0;
 
     dest->nfflies = fflies_old->nfflies;
     dest->nparams = fflies_old->nparams;
@@ -125,7 +125,7 @@ static void
 move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
             const double alpha, const double gamma, const double mins[], const double maxs[])
 {
-    unsigned register int i = 0, j = 0;
+    unsigned int i = 0, j = 0;
 
     size_t nflies = pop->nfflies;
     size_t nparams = pop->nparams;
@@ -145,7 +145,7 @@ static void
 move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams, 
         const double alpha, const double gamma, const double mins[], const double maxs[])
 {
-    unsigned register int i = 0;
+    unsigned int i = 0;
     const double beta0 = 1.0;
     
     double ilight = (*f)(fly, nparams);
@@ -176,7 +176,7 @@ move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams,
 static double
 calc_distance(const ffly *fly, const ffly *fly_old, const size_t nparams)
 {
-    register unsigned int i = 0;
+    unsigned int i = 0;
     double aggr = 0.0, dist = 0.0;
     for (i = 0; i < nparams; i++)
     {
@@ -190,7 +190,7 @@ static void
 output_points(ffly_population *pop, const char *fname)
 {
 
-    unsigned register int i = 0, j = 0;
+    unsigned int i = 0, j = 0;
     FILE *file = NULL;
 
     file = fopen(fname, "wt");
