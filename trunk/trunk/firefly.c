@@ -1,20 +1,20 @@
 #include "firefly.h"
 
-static void move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f, double alpha, double gamma, double mins[], double maxs[]);
+static void move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f, 
+                        const double alpha, const double gamma, const double mins[], const double maxs[]);
 static void move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams, const double alpha, const double gamma);
 static void memcpy_fflies(ffly_population *fflies_old, ffly_population *dest);
 static void memcpy_ffly(ffly *fly, ffly *dest, size_t nparams);
-static double calc_distance(double *dest, size_t nparams, const ffly *fly, const ffly *fly_old);
-static void fix_positions(ffly_population *pop, double mins[], double maxs[]);
+static void fix_positions(ffly_population *pop, const double mins[], const double maxs[]);
 static void output_points(ffly_population *pop, const char *fname);
-static void print_fflies(ffly_population *pop);
+static double calc_distance(const ffly *fly, const ffly *fly_old, size_t nparams);
 
 /*
 
         This creates our firefly population and assigns random positions.
 */
 ffly_population*
-init_fflies(size_t ncount, size_t nparams, double mins[], double maxs[])
+init_fflies(const size_t ncount, const size_t nparams, const double mins[], const double maxs[])
 {
     register unsigned int i = 0, j = 0;
     ffly_population *pop = NULL;
@@ -57,7 +57,7 @@ destroy_fflies(ffly_population *pop)
 };
 
 void
-ffa(size_t nfireflies, size_t niteration, size_t nparams, double mins[], double maxs[],
+ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, const double mins[], const double maxs[],
     obj_func f)
 {
 
@@ -119,32 +119,11 @@ memcpy_ffly(ffly *dest, ffly *fly, size_t nparams)
 
 /*
 
-    Use this to just print values of the population
-*/
-void
-print_fflies(ffly_population *pop)
-{
-    unsigned register int i = 0, j = 0;
-
-    for (i = 0; i < pop->nfflies; i++)
-    {
-        printf("FFly %d:", i);
-        for (j = 0; j < pop->nparams; j++)
-        {
-            printf("\t%.2lf", pop->flies[i].params[j]);
-        }
-        printf("\n");
-    }
-    return;
-};
-
-/*
-
         This is what moves our fireflies towards the most attractive flies
 */
 static void
 move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
-            double alpha, double gamma, double *mins, double *maxs)
+            const double alpha, const double gamma, const double *mins, const double *maxs)
 {
     unsigned register int i = 0, j = 0;
 
@@ -170,14 +149,14 @@ move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams, const double al
 {
     unsigned register int i = 0;
     const double beta0 = 1.0;
-    double distances[512] = {0};
-    double ilight = (*f)(fly);
-    double jlight = (*f)(old);
+    
+    double ilight = (*f)(fly, nparams);
+    double jlight = (*f)(old, nparams);
 
-    if (ilight < jlight)
+    if (ilight > jlight)
     {
         //get the distance to the other fly
-        double r = calc_distance(distances, nparams, fly, old);
+        double r = calc_distance(fly, old, nparams);
 
         //determine attractiveness with air density [gamma]
         double beta = beta0 * exp((-gamma) * (r * r));
@@ -191,14 +170,14 @@ move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams, const double al
 };
 
 static double
-calc_distance(double *dest, size_t nparams, const ffly *fly, const ffly *fly_old)
+calc_distance(const ffly *fly, const ffly *fly_old, const size_t nparams)
 {
     register unsigned int i = 0;
-    double aggr = 0.0;
+    double aggr = 0.0, dist = 0.0;
     for (i = 0; i < nparams; i++)
     {
-        dest[i] = fly->params[i] - fly_old->params[i];
-        aggr += (dest[i] * dest[i]);
+        dist = fly->params[i] - fly_old->params[i];
+        aggr += (dist * dist);
     }
     return sqrt(aggr);
 }
@@ -208,7 +187,7 @@ calc_distance(double *dest, size_t nparams, const ffly *fly, const ffly *fly_old
         This should correct our positions that have past the boundries from random steps
  */
 static void
-fix_positions(ffly_population *pop, double *mins, double *maxs)
+fix_positions(ffly_population *pop, const double mins[], const double maxs[])
 {
     unsigned register int i = 0, j = 0;
 
