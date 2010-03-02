@@ -11,8 +11,8 @@
 #define PI 3.14159265
 #define E 2.71828183
 
-#define N_ACKLEY 2
-#define F_ACKLEY 2.0
+#define N_ACKLEY 128
+#define F_ACKLEY 128.0
 
 /*
     Our function declarations
@@ -27,15 +27,14 @@ main(int argc, char **argv)
 {
     double mins[N_ACKLEY] = {0.0};
     double maxs[N_ACKLEY] = {0.0};
-    
     char c;
     size_t pop_count = POP_COUNT, max_gen = MAX_GEN;
     size_t i = 0;
-    
+
     for (i=0; i < N_ACKLEY; i++)
     {
-        mins[i] = -512.03;
-        maxs[i] =  511.97;
+        mins[i] = -30.0;
+        maxs[i] =  30.0;
     }
     
     while ( (c = getopt(argc, argv, "n:g:")) != -1)
@@ -49,6 +48,7 @@ main(int argc, char **argv)
             max_gen = atoi(optarg);
             break;
         case '?':
+            printf("FFlies usage: -n NumberOfFlies -g NumberOfGenerations\n");
             return EXIT_FAILURE;
             break;
         default:
@@ -57,7 +57,7 @@ main(int argc, char **argv)
         }
     }
 
-    ffa(pop_count, max_gen, N_ACKLEY, mins, maxs, &schwefel);
+    ffa(pop_count, max_gen, N_ACKLEY, mins, maxs, &akley);
     
     return EXIT_SUCCESS;
 };
@@ -74,7 +74,7 @@ yang(const ffly *fly, const size_t nparams)
         exp(-((x + 4) * (x + 4)) - ((y - 4) * (y - 4))) +
         (2 * (exp(-(x*x) - (y * y)) + exp(-(x*x) - ((y+4) * (y+4)) )));
 
-    return 1/z;
+    return z;
 };
 
 
@@ -95,7 +95,7 @@ akley(const ffly *fly, const size_t nparams)
     exp1 = exp(-0.2 * sqrt(frac * sumsq));
     exp2 = exp(frac * sumcos);
     
-    return -20 * exp1 - exp2 + 20 + E;
+    return 1.0 / (-20 * exp1 - exp2 + 20 + E);
 };
         
 double
@@ -110,7 +110,7 @@ schwefel(const ffly *fly, const size_t nparams)
         sum +=  fly->params[i] * sin(sqrt(abs(fly->params[i])));
     }
     
-    return a * ((double)nparams) * sum;
+    return 1.0 / (a * ((double)nparams) * sum);
 };
         
 double
@@ -128,7 +128,7 @@ rosenbrock(const ffly *fly, const size_t nparams)
         part *= part;
         sum += (100 * part) + ( (x - 1) * (x - 1) );
     }
-    return sum;
+    return 1.0 / sum;
 };
         
 
