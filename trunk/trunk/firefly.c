@@ -2,10 +2,10 @@
 
 static void move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f, 
                         const double alpha, const double gamma, const double mins[], const double maxs[]);
-static void move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams, const double alpha, const double gamma);
+static void move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams, 
+        const double alpha, const double gamma, const double mins[], const double maxs[]);
 static void memcpy_fflies(ffly_population *fflies_old, ffly_population *dest);
 static void memcpy_ffly(ffly *fly, ffly *dest, size_t nparams);
-static void fix_positions(ffly_population *pop, const double mins[], const double maxs[]);
 static void output_points(ffly_population *pop, const char *fname);
 static double calc_distance(const ffly *fly, const ffly *fly_old, size_t nparams);
 
@@ -123,7 +123,7 @@ memcpy_ffly(ffly *dest, ffly *fly, size_t nparams)
 */
 static void
 move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
-            const double alpha, const double gamma, const double *mins, const double *maxs)
+            const double alpha, const double gamma, const double mins[], const double maxs[])
 {
     unsigned register int i = 0, j = 0;
 
@@ -132,20 +132,18 @@ move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
 
     for (i=0; i < nflies; i++)
     {
-	#pragma omp parallel for private(j) shared(nflies, pop, pop_old, f, nparams, alpha, gamma, i)
+	    #pragma omp parallel for private(j) shared(nflies, pop, pop_old, f, nparams, alpha, gamma, i, mins, maxs)
         for (j = 0; j < nflies; j++)
         {
-                move_fly(&pop->flies[i], &pop_old->flies[j], f, nparams, alpha, gamma);
+            move_fly(&pop->flies[i], &pop_old->flies[j], f, nparams, alpha, gamma, mins, maxs);
         }
     }
-
-    //fix boundaries overstepped by random step
-    fix_positions(pop, mins, maxs);
     return;
 };
 
 static void
-move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams, const double alpha, const double gamma)
+move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams, 
+        const double alpha, const double gamma, const double mins[], const double maxs[])
 {
     unsigned register int i = 0;
     const double beta0 = 1.0;
@@ -153,7 +151,7 @@ move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams, const double al
     double ilight = (*f)(fly, nparams);
     double jlight = (*f)(old, nparams);
 
-    if (ilight > jlight)
+    if (ilight < jlight)
     {
         //get the distance to the other fly
         double r = calc_distance(fly, old, nparams);
@@ -164,11 +162,17 @@ move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams, const double al
         //adjust position with a small random step
         for (i = 0; i < nparams; i++)
         {
-            fly->params[i] = ((1 - beta) * fly->params[i]) + (beta * old->params[i]) + (alpha * (my_rand() - .5));
+            double val = ((1 - beta) * fly->params[i]) + (beta * old->params[i]) + (alpha * (my_rand() - .5));
+            
+            //keep within bounds
+            fly->params[i] = (val < mins[i]) ? mins[i] : (val > maxs[i]) ? maxs[i] : val;
         }
     }
 };
 
+/*
+    Calculates the euclidean distance of the two vectors
+*/
 static double
 calc_distance(const ffly *fly, const ffly *fly_old, const size_t nparams)
 {
@@ -180,26 +184,6 @@ calc_distance(const ffly *fly, const ffly *fly_old, const size_t nparams)
         aggr += (dist * dist);
     }
     return sqrt(aggr);
-}
-
-/*
-
-        This should correct our positions that have past the boundries from random steps
- */
-static void
-fix_positions(ffly_population *pop, const double mins[], const double maxs[])
-{
-    unsigned register int i = 0, j = 0;
-
-    for (i=0; i < pop->nfflies; i++)
-    {
-        for (j = 0; j < pop->nparams; j++)
-        {
-            if (pop->flies[i].params[j] < mins[j]) pop->flies[i].params[j] = mins[j];
-            if (pop->flies[i].params[j] > maxs[j]) pop->flies[i].params[j] = maxs[j];
-        }
-    }
-    return;
 };
 
 static void 
