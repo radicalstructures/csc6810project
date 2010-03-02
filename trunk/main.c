@@ -11,8 +11,8 @@
 #define PI 3.14159265
 #define E 2.71828183
 
-#define N_ACKLEY 128
-#define F_ACKLEY 128.0
+#define N_ACKLEY 2
+#define F_ACKLEY 2.0
 
 /*
     Our function declarations
@@ -33,8 +33,8 @@ main(int argc, char **argv)
 
     for (i=0; i < N_ACKLEY; i++)
     {
-        mins[i] = -30.0;
-        maxs[i] =  30.0;
+        mins[i] = -5.0;
+        maxs[i] =  5.0;
     }
     
     while ( (c = getopt(argc, argv, "n:g:")) != -1)
@@ -57,7 +57,7 @@ main(int argc, char **argv)
         }
     }
 
-    ffa(pop_count, max_gen, N_ACKLEY, mins, maxs, &akley);
+    ffa(pop_count, max_gen, N_ACKLEY, mins, maxs, &yang);
     
     return EXIT_SUCCESS;
 };
