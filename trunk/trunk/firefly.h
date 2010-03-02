@@ -6,7 +6,6 @@
 #include <omp.h>
 #include <math.h>
 #include <time.h>
-#include "point.h"
 
 /* 
     Some useful Macros

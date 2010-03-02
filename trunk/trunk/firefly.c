@@ -8,7 +8,7 @@ static void memcpy_fflies(ffly_population *fflies_old, ffly_population *dest);
 static void memcpy_ffly(ffly *fly, ffly *dest, size_t nparams);
 static void output_points(ffly_population *pop, const char *fname);
 static double calc_distance(const ffly *fly, const ffly *fly_old, size_t nparams);
-
+static double my_rand(void);
 /*
 
         This creates our firefly population and assigns random positions.
@@ -206,5 +206,11 @@ output_points(ffly_population *pop, const char *fname)
         }
     }
     fclose(file);
+};
+
+double
+my_rand(void)
+{
+    return ( ( (double)rand() ) / ((double) RAND_MAX + 1.0 ));
 };
 
