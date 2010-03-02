@@ -95,7 +95,7 @@ yang(const ffly *fly, const size_t nparams)
 double
 akley(const ffly *fly, const size_t nparams)
 {
-    unsigned register int i = 0;
+    unsigned int i = 0;
     double exp1, exp2, frac;
     double sumsq = 0.0, sumcos = 0.0;
     
@@ -114,7 +114,7 @@ akley(const ffly *fly, const size_t nparams)
 double
 schwefel(const ffly *fly, const size_t nparams)
 {
-    unsigned register int i = 0;
+    unsigned int i = 0;
     const double a = 418.9829;
     double sum = 0.0;
     
@@ -129,7 +129,7 @@ schwefel(const ffly *fly, const size_t nparams)
 double
 rosenbrock(const ffly *fly, const size_t nparams)
 {
-    unsigned register int i = 0;
+    unsigned int i = 0;
     double sum = 0.0;
     double part = 0.0;
     double x;
