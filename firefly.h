@@ -10,12 +10,12 @@
 /* 
     Some useful Macros
 */
-#define POP_COUNT   50
-#define MAX_GEN     50
+#define EPSILON 0.00001
 
 typedef struct _ff
 {
 	double *params;
+	double val;
 } ffly;
 
 /* 
@@ -46,8 +46,31 @@ void
 destroy_fflies(ffly_population *pop);
 
 /*
-    Our main function
+    Vanilla Firefly Optimization Algorithm
 */
 void 
-ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, const double mins[], const double maxs[], obj_func f);
+ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, 
+        const double mins[], const double maxs[], obj_func f);
 
+/*
+    Firefly + SA  Optimization Algorithm
+*/
+void
+ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, 
+        const double mins[], const double maxs[],  obj_func f);
+        
+        
+/*
+    Vanilla Firefly Optimization Algorithm TEST FUNCTION
+*/
+size_t 
+test_ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, 
+        const double mins[], const double maxs[], obj_func f);
+
+/*
+    Firefly + SA  Optimization Algorithm  TEST FUNCTION
+*/
+size_t
+test_ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, 
+        const double mins[], const double maxs[],  obj_func f);
+        

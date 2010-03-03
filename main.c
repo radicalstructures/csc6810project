@@ -11,6 +11,8 @@
 #define PI 3.14159265
 #define E 2.71828183
 
+#define POP_COUNT 50
+#define MAX_GEN 50
 
 /*
     Our function declarations
@@ -29,7 +31,8 @@ main(int argc, char **argv)
     char c;
     size_t pop_count = POP_COUNT, max_gen = MAX_GEN;
     size_t i = 0, dimension = 2;
-
+    size_t ffa = 0, ffasa = 0;
+    
     while ( (c = getopt(argc, argv, "n:g:d:m:x:")) != -1)
     {
         switch (c)
@@ -68,7 +71,10 @@ main(int argc, char **argv)
 		maxs[i] = max;
 	}
 
-	ffa(pop_count, max_gen, dimension, mins, maxs, &yang);
+	ffa   = test_ffa(pop_count, max_gen, dimension, mins, maxs, &rosenbrock);
+	ffasa = test_ffasa(pop_count, max_gen, dimension, mins, maxs, &rosenbrock);
+    
+    printf("FFA: %ld, FFASA: %ld\n", ffa, ffasa);
     
 	free(mins);
 	free(maxs);

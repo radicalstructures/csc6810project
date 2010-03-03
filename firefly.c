@@ -1,14 +1,16 @@
 #include "firefly.h"
 
 static void move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f, 
-                        const double alpha, const double gamma, const double mins[], const double maxs[]);
+                        double alpha, const double gamma, const double mins[], const double maxs[]);
 static void move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams, 
-        const double alpha, const double gamma, const double mins[], const double maxs[]);
+                        double alpha, const double gamma, const double mins[], const double maxs[]);
 static void memcpy_fflies(ffly_population *fflies_old, ffly_population *dest);
 static void memcpy_ffly(ffly *fly, ffly *dest, size_t nparams);
 static void output_points(ffly_population *pop, const char *fname);
 static double calc_distance(const ffly *fly, const ffly *fly_old, size_t nparams);
 static double my_rand(void);
+static double std_dev(const ffly_population *pop);
+
 /*
 
         This creates our firefly population and assigns random positions.
@@ -32,6 +34,7 @@ init_fflies(const size_t ncount, const size_t nparams, const double mins[], cons
         for (j=0; j < nparams; j++)
         {
             pop->flies[i].params[j] = my_rand()*(maxs[j]-mins[j]) + mins[j];
+            pop->flies[i].val = 0.0;
         }
     }
 
@@ -93,6 +96,130 @@ ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, cons
     return;    
 };
 
+size_t
+test_ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, const double mins[], const double maxs[],
+    obj_func f)
+{
+    size_t i = 0;
+    ffly_population *fflies = NULL;
+    ffly_population *fflies_old = NULL;
+
+    const double alpha = 0.2; //randomness step
+    const double gamma = 1.0; //absorption coefficient
+
+    //initialize our RNG
+    srand(time(NULL));
+
+    //initialize our firefly array
+    fflies = init_fflies(nfireflies, nparams, mins, maxs);
+
+    //initialize our old firefly array
+    fflies_old = init_fflies(nfireflies, nparams, mins, maxs);
+
+    output_points(fflies, "start.dat");
+    do
+    {
+        //keep another copy for move function
+        memcpy_fflies(fflies_old, fflies);
+
+        //move the flies based on attractiveness
+        move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
+        
+        i++;
+    } while (std_dev(fflies) > EPSILON);
+    output_points(fflies, "end.dat");
+
+    destroy_fflies(fflies);
+    destroy_fflies(fflies_old);
+    return i;    
+};
+
+void
+ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, const double mins[], const double maxs[],
+    obj_func f)
+{
+
+    size_t i = 0;
+    ffly_population *fflies = NULL;
+    ffly_population *fflies_old = NULL;
+
+    double alpha = 0.0;
+    const double alpha0 = 0.2; //intial randomness step
+    const double gamma = 1.0; //absorption coefficient
+
+    //initialize our RNG
+    srand(time(NULL));
+
+    //initialize our firefly array
+    fflies = init_fflies(nfireflies, nparams, mins, maxs);
+
+    //initialize our old firefly array
+    fflies_old = init_fflies(nfireflies, nparams, mins, maxs);
+
+    output_points(fflies, "start.dat");
+    for (i=0; i < niteration; i++)
+    {
+        //keep another copy for move function
+        memcpy_fflies(fflies_old, fflies);
+
+        //calculate our new alpha
+        alpha = alpha0 / log(i + 1);
+        
+        //move the flies based on attractiveness
+        move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
+    }
+    output_points(fflies, "end.dat");
+
+    destroy_fflies(fflies);
+    destroy_fflies(fflies_old);
+    return;    
+};
+
+size_t
+test_ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, const double mins[], const double maxs[],
+    obj_func f)
+{
+
+    size_t i = 0;
+    ffly_population *fflies = NULL;
+    ffly_population *fflies_old = NULL;
+
+    double alpha = 0.0;
+    const double alpha0 = 0.2; //intial randomness step
+    const double gamma = 1.0; //absorption coefficient
+
+    //initialize our RNG
+    srand(time(NULL));
+
+    //initialize our firefly array
+    fflies = init_fflies(nfireflies, nparams, mins, maxs);
+
+    //initialize our old firefly array
+    fflies_old = init_fflies(nfireflies, nparams, mins, maxs);
+
+    output_points(fflies, "start.dat");
+    do
+    {
+        //keep another copy for move function
+        memcpy_fflies(fflies_old, fflies);
+
+        //calculate our new alpha
+        alpha = alpha0 / log(i + 1);
+        
+        //move the flies based on attractiveness
+        move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
+        
+        i++;
+    } while (std_dev(fflies) > EPSILON);
+    
+    output_points(fflies, "end.dat");
+
+    destroy_fflies(fflies);
+    destroy_fflies(fflies_old);
+    
+    return i;    
+};
+
 /*
 
     Use this to copy a set of fireflies to a new set
@@ -118,12 +245,11 @@ memcpy_ffly(ffly *dest, ffly *fly, size_t nparams)
 };
 
 /*
-
-        This is what moves our fireflies towards the most attractive flies
+        This is what moves our fireflies towards the most attractive flies. Vanilla FFA
 */
 static void
 move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
-            const double alpha, const double gamma, const double mins[], const double maxs[])
+            double alpha, const double gamma, const double mins[], const double maxs[])
 {
     unsigned int i = 0, j = 0;
 
@@ -148,10 +274,10 @@ move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams,
     unsigned int i = 0;
     const double beta0 = 1.0;
     
-    double ilight = (*f)(fly, nparams);
+    fly->val = (*f)(fly, nparams);
     double jlight = (*f)(old, nparams);
 
-    if (ilight < jlight)
+    if (fly->val < jlight)
     {
         //get the distance to the other fly
         double r = calc_distance(fly, old, nparams);
@@ -208,9 +334,32 @@ output_points(ffly_population *pop, const char *fname)
     fclose(file);
 };
 
-double
+static double
 my_rand(void)
 {
     return ( ( (double)rand() ) / ((double) RAND_MAX + 1.0 ));
 };
 
+static double 
+std_dev(const ffly_population *pop)
+{
+    size_t i = 0;
+    double mean = 0.0;
+    double sumsq = 0.0;
+    
+    for (i = 0; i < pop->nfflies; i++)
+    {
+        mean += pop->flies[i].val;
+    }
+    
+    mean /= ((double)pop->nfflies);
+    
+    for (i = 0; i < pop->nfflies; i++)
+    {
+        sumsq += (pop->flies[i].val - mean) * (pop->flies[i].val - mean);
+    }
+    
+    sumsq /= ((double)pop->nfflies);
+    
+    return sqrt(sumsq);
+};
