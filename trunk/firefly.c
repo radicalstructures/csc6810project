@@ -10,6 +10,7 @@ static void output_points(ffly_population *pop, const char *fname);
 static double calc_distance(const ffly *fly, const ffly *fly_old, size_t nparams);
 static double my_rand(void);
 static double std_dev(const ffly_population *pop);
+static double mean_delta(const ffly_population *pop, const ffly_population *old);
 
 /*
 
@@ -80,7 +81,7 @@ ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, cons
     //initialize our old firefly array
     fflies_old = init_fflies(nfireflies, nparams, mins, maxs);
 
-    output_points(fflies, "start.dat");
+    output_points(fflies, "start_ffa.dat");
     for (i=0; i < niteration; i++)
     {
         //keep another copy for move function
@@ -89,7 +90,7 @@ ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, cons
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
     }
-    output_points(fflies, "end.dat");
+    output_points(fflies, "end_ffa.dat");
 
     destroy_fflies(fflies);
     destroy_fflies(fflies_old);
@@ -104,8 +105,8 @@ test_ffa(const size_t nfireflies, const size_t niteration, const size_t nparams,
     ffly_population *fflies = NULL;
     ffly_population *fflies_old = NULL;
 
-    const double alpha = 0.2; //randomness step
-    const double gamma = 1.0; //absorption coefficient
+    const double alpha = 0.01; //randomness step
+    const double gamma = 0.10; //absorption coefficient
 
     //initialize our RNG
     srand(time(NULL));
@@ -116,7 +117,7 @@ test_ffa(const size_t nfireflies, const size_t niteration, const size_t nparams,
     //initialize our old firefly array
     fflies_old = init_fflies(nfireflies, nparams, mins, maxs);
 
-    output_points(fflies, "start.dat");
+    output_points(fflies, "start_ffa.dat");
     do
     {
         //keep another copy for move function
@@ -126,12 +127,13 @@ test_ffa(const size_t nfireflies, const size_t niteration, const size_t nparams,
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
         
         i++;
-    } while (std_dev(fflies) > EPSILON);
-    output_points(fflies, "end.dat");
+    } while (mean_delta(fflies, fflies_old) > EPSILON);
+    output_points(fflies, "end_ffa.dat");
 
     destroy_fflies(fflies);
     destroy_fflies(fflies_old);
-    return i;    
+
+    return i * nfireflies;    
 };
 
 void
@@ -156,7 +158,7 @@ ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, co
     //initialize our old firefly array
     fflies_old = init_fflies(nfireflies, nparams, mins, maxs);
 
-    output_points(fflies, "start.dat");
+    output_points(fflies, "start_ffasa.dat");
     for (i=0; i < niteration; i++)
     {
         //keep another copy for move function
@@ -168,7 +170,7 @@ ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, co
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
     }
-    output_points(fflies, "end.dat");
+    output_points(fflies, "end_ffasa.dat");
 
     destroy_fflies(fflies);
     destroy_fflies(fflies_old);
@@ -180,7 +182,7 @@ test_ffasa(const size_t nfireflies, const size_t niteration, const size_t nparam
     obj_func f)
 {
 
-    size_t i = 0;
+    size_t i = 1;
     ffly_population *fflies = NULL;
     ffly_population *fflies_old = NULL;
 
@@ -197,7 +199,7 @@ test_ffasa(const size_t nfireflies, const size_t niteration, const size_t nparam
     //initialize our old firefly array
     fflies_old = init_fflies(nfireflies, nparams, mins, maxs);
 
-    output_points(fflies, "start.dat");
+    output_points(fflies, "start_ffasa.dat");
     do
     {
         //keep another copy for move function
@@ -205,19 +207,19 @@ test_ffasa(const size_t nfireflies, const size_t niteration, const size_t nparam
 
         //calculate our new alpha
         alpha = alpha0 / log(i + 1);
-        
+
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
         
         i++;
-    } while (std_dev(fflies) > EPSILON);
+    } while (mean_delta(fflies, fflies_old) > EPSILON);
     
-    output_points(fflies, "end.dat");
+    output_points(fflies, "end_ffasa.dat");
 
     destroy_fflies(fflies);
     destroy_fflies(fflies_old);
     
-    return i;    
+    return (i-1) * nfireflies;    
 };
 
 /*
@@ -234,6 +236,7 @@ memcpy_fflies(ffly_population *dest, ffly_population *fflies_old)
 
     for (i = 0 ; i < fflies_old->nfflies; i++)
     {
+        dest->flies[i].val = fflies_old->flies[i].val;
         memcpy_ffly(&dest->flies[i], &fflies_old->flies[i], dest->nparams);
     }
 };
@@ -363,3 +366,18 @@ std_dev(const ffly_population *pop)
     
     return sqrt(sumsq);
 };
+
+static double
+mean_delta(const ffly_population *pop, const ffly_population *old)
+{
+    double sumdelta = 0.0;
+    size_t i = 0;
+    
+    for (i = 0; i < pop->nfflies; i++)
+    {
+        sumdelta += abs(old->flies[i].val - pop->flies[i].val);
+    }
+    
+    return sumdelta / ((double)pop->nfflies);
+};
+

@@ -10,7 +10,10 @@
 /* 
     Some useful Macros
 */
-#define EPSILON 0.00001
+#define EPSILON     0.00001
+#define BETA_ZERO   1.0
+#define GAMMA       1.0
+#define ALPHA_ZERO  0.1
 
 typedef struct _ff
 {
@@ -31,7 +34,7 @@ typedef struct _ffp
 /* 
     This will allow for different functions to be passed in for evaluation
 */
-typedef double (obj_func)(const ffly*, const size_t nparams);
+typedef double (*obj_func)(const ffly*, const size_t nparams);
 
 /* 
     This will initiate a population of fireflies

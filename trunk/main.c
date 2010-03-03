@@ -31,7 +31,7 @@ main(int argc, char **argv)
     char c;
     size_t pop_count = POP_COUNT, max_gen = MAX_GEN;
     size_t i = 0, dimension = 2;
-    size_t ffa = 0, ffasa = 0;
+    size_t nffa = 0, nffasa = 0;
     
     while ( (c = getopt(argc, argv, "n:g:d:m:x:")) != -1)
     {
@@ -63,21 +63,25 @@ main(int argc, char **argv)
     }
 
     mins = (double*)calloc(dimension, sizeof(double));
-	maxs = (double*)calloc(dimension, sizeof(double));
-	
-	for (i=0; i < dimension; i++)
-	{
-		mins[i] = min;
-		maxs[i] = max;
-	}
+    maxs = (double*)calloc(dimension, sizeof(double));
 
-	ffa   = test_ffa(pop_count, max_gen, dimension, mins, maxs, &rosenbrock);
-	ffasa = test_ffasa(pop_count, max_gen, dimension, mins, maxs, &rosenbrock);
+    for (i=0; i < dimension; i++)
+    {
+        mins[i] = min;
+        maxs[i] = max;
+    }
     
-    printf("FFA: %ld, FFASA: %ld\n", ffa, ffasa);
     
-	free(mins);
-	free(maxs);
+    nffa   = test_ffa(pop_count, max_gen, dimension, mins, maxs, &yang);
+    nffasa = test_ffasa(pop_count, max_gen, dimension, mins, maxs, &yang);
+
+    printf("FFA: %ld, FFASA: %ld\n", nffa, nffasa);
+    
+    
+    //ffa(pop_count, max_gen, dimension, mins, maxs, &rosenbrock);
+    
+    free(mins);
+    free(maxs);
     return EXIT_SUCCESS;
 };
 
