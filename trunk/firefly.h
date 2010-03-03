@@ -36,17 +36,11 @@ typedef struct _ffp
 */
 typedef double (*obj_func)(const ffly*, const size_t nparams);
 
-/* 
-    This will initiate a population of fireflies
-*/
-ffly_population* 
-init_fflies(const size_t ncount, const size_t nparams, const double mins[], const double maxs[]);
 
-/*
-    Use this to clean up your population
-*/
-void 
-destroy_fflies(ffly_population *pop);
+/******************************************
+    OPTIMIZATION FUNCTIONS
+    These will run with the given parameters
+****************************************/
 
 /*
     Vanilla Firefly Optimization Algorithm
@@ -63,17 +57,24 @@ ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams,
         const double mins[], const double maxs[],  obj_func f);
         
         
+        
+/******************************************
+    TEST FUNCTIONS
+    These will run until the flies really aren't moving 
+    much anymore and return the function evaluation count
+****************************************/
+
 /*
     Vanilla Firefly Optimization Algorithm TEST FUNCTION
 */
 size_t 
-test_ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, 
+test_ffa(const size_t nfireflies, const size_t nparams, 
         const double mins[], const double maxs[], obj_func f);
 
 /*
     Firefly + SA  Optimization Algorithm  TEST FUNCTION
 */
 size_t
-test_ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, 
+test_ffasa(const size_t nfireflies, const size_t nparams, 
         const double mins[], const double maxs[],  obj_func f);
         

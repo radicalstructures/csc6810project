@@ -72,8 +72,8 @@ main(int argc, char **argv)
     }
     
     
-    nffa   = test_ffa(pop_count, max_gen, dimension, mins, maxs, &yang);
-    nffasa = test_ffasa(pop_count, max_gen, dimension, mins, maxs, &yang);
+    nffa   = test_ffa(pop_count, max_gen, dimension, mins, maxs, &akley);
+    nffasa = test_ffasa(pop_count, max_gen, dimension, mins, maxs, &akley);
 
     printf("FFA: %ld, FFASA: %ld\n", nffa, nffasa);
     
