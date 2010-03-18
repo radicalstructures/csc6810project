@@ -138,6 +138,7 @@ test_ffa(const size_t nfireflies, const size_t nparams, const double mins[], con
     ffly_population *fflies = NULL;
     ffly_population *fflies_old = NULL;
 
+    double min = 0.0, min_old = 0.0;
     const double alpha = ALPHA_ZERO;    //randomness step
     const double gamma = GAMMA;         //absorption coefficient
 
@@ -153,12 +154,12 @@ test_ffa(const size_t nfireflies, const size_t nparams, const double mins[], con
     output_points(fflies, "start_ffa.dat");
     do
     {
+        min_old = min;
         //keep another copy for move function
         memcpy_fflies(fflies_old, fflies);
 
         //move the flies based on attractiveness
-        move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
-        
+		move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
         i++;
     } while (mean_delta(fflies, fflies_old) > EPSILON);
     output_points(fflies, "end_ffa.dat");
@@ -219,6 +220,7 @@ test_ffasa(const size_t nfireflies, const size_t nparams, const double mins[], c
     ffly_population *fflies = NULL;
     ffly_population *fflies_old = NULL;
 
+    double min = 0.0, min_old = 0.0;
     double alpha = 0.0;
     const double alpha0 = ALPHA_ZERO;   //intial randomness step
     const double gamma = GAMMA;         //absorption coefficient
@@ -235,6 +237,7 @@ test_ffasa(const size_t nfireflies, const size_t nparams, const double mins[], c
     output_points(fflies, "start_ffasa.dat");
     do
     {
+        min_old = min;
         //keep another copy for move function
         memcpy_fflies(fflies_old, fflies);
 
@@ -243,7 +246,6 @@ test_ffasa(const size_t nfireflies, const size_t nparams, const double mins[], c
 
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
-        
         i++;
     } while (mean_delta(fflies, fflies_old) > EPSILON);
     
@@ -270,26 +272,28 @@ move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
 
     for (i=0; i < nflies; i++)
     {
-	    #pragma omp parallel for private(j) shared(nflies, pop, pop_old, f, nparams, alpha, gamma, i, mins, maxs)
+        #pragma omp parallel for private(j) shared(nflies, pop, pop_old, f, nparams, alpha, gamma, i, mins, maxs)
         for (j = 0; j < nflies; j++)
         {
-            move_fly(&pop->flies[i], &pop_old->flies[j], f, nparams, alpha, gamma, mins, maxs);
+            move_fly(&pop->flies[i], &pop_old->flies[j], f, nparams, alpha, gamma, mins, maxs);         
         }
     }
-    return;
 };
 
+/*
+    This moves an individual fly torwards another
+*/
 static void
 move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams, 
         const double alpha, const double gamma, const double mins[], const double maxs[])
 {
     size_t i = 0;
-    const double beta0 = BETA_ZERO;
+    const double beta0 = BETA_ZERO;	//base attraction
     
     fly->val = (*f)(fly, nparams);
     double jlight = (*f)(old, nparams);
 
-    if (fly->val < jlight)
+    if (fly->val > jlight)
     {
         //get the distance to the other fly
         double r = calc_distance(fly, old, nparams);
@@ -306,6 +310,7 @@ move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams,
             fly->params[i] = (val < mins[i]) ? mins[i] : (val > maxs[i]) ? maxs[i] : val;
         }
     }
+    
 };
 
 /*
@@ -324,6 +329,9 @@ calc_distance(const ffly *fly, const ffly *fly_old, const size_t nparams)
     return sqrt(aggr);
 };
 
+/*
+    writes our points out to a file
+*/
 static void 
 output_points(ffly_population *pop, const char *fname)
 {
@@ -346,12 +354,18 @@ output_points(ffly_population *pop, const char *fname)
     fclose(file);
 };
 
+/*
+    returns value in [0, 1]
+*/
 static double
 my_rand(void)
 {
-    return ( ( (double)rand() ) / ((double) RAND_MAX + 1.0 ));
+    return ( ( (double)rand() ) / ((double) RAND_MAX ));
 };
 
+/*
+    returns the std dev of the objective func values
+*/
 static double 
 std_dev(const ffly_population *pop)
 {
@@ -376,6 +390,9 @@ std_dev(const ffly_population *pop)
     return sqrt(sumsq);
 };
 
+/*
+    returns the mean of all the deltas for the objective func
+*/
 static double
 mean_delta(const ffly_population *pop, const ffly_population *old)
 {
@@ -384,7 +401,7 @@ mean_delta(const ffly_population *pop, const ffly_population *old)
     
     for (i = 0; i < pop->nfflies; i++)
     {
-        sumdelta += abs(old->flies[i].val - pop->flies[i].val);
+        sumdelta += fabs(old->flies[i].val - pop->flies[i].val);
     }
     
     return sumdelta / ((double)pop->nfflies);
