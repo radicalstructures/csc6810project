@@ -15,12 +15,16 @@
 #define MAX_GEN 50
 
 /*
-    Our function declarations
+    Our objective function declarations
 */
 double yang(const ffly *fly, const size_t nparams);
 double akley(const ffly *fly, const size_t nparams);
 double schwefel(const ffly *fly, const size_t nparams);
 double rosenbrock(const ffly *fly, const size_t nparams);
+double michalewicz(const ffly *fly, const size_t nparams);
+double easom(const ffly *fly, const size_t nparams);
+
+void init_params(int argc, char **argv, size_t *npop, size_t *ngen, size_t *ndim, double *min, double *max);
 
 int
 main(int argc, char **argv)
@@ -28,41 +32,15 @@ main(int argc, char **argv)
     double *mins;
     double *maxs;
 	double min=0.0, max=0.0;
-    char c;
     size_t pop_count = POP_COUNT, max_gen = MAX_GEN;
     size_t i = 0, dimension = 2;
     size_t nffa = 0, nffasa = 0;
-	obj_func func = &rosenbrock;
-    
-    while ( (c = getopt(argc, argv, "n:g:d:m:x:")) != -1)
-    {
-        switch (c)
-        {
-        case 'n':
-            pop_count = atoi(optarg);            
-            break;
-        case 'g':
-            max_gen = atoi(optarg);            
-            break;
-        case 'd':
-            dimension = atoi(optarg);            
-            break;
-        case 'm':
-            min = atof(optarg);
-            break;
-        case 'x':
-            max = atof(optarg);
-            break;
-        case '?':
-            printf("FFlies usage: -n NumberOfFlies -g NumberOfGenerations -d NumberOfDimension -m Min -x Max\n");
-            return EXIT_FAILURE;
-            break;
-        default:
-            printf("FFlies usage: -n NumberOfFlies -g NumberOfGenerations -d NumberOfDimension -m Min -x Max\n");
-            break;
-        }
-    }
+	
+	init_params(argc, argv, &pop_count, &max_gen, &dimension, &min, &max);
 
+	//this should change to be some parameter soon...
+	obj_func func = &akley;
+    
     mins = (double*)calloc(dimension, sizeof(double));
     maxs = (double*)calloc(dimension, sizeof(double));
 
@@ -71,8 +49,7 @@ main(int argc, char **argv)
         mins[i] = min;
         maxs[i] = max;
     }
-    
-
+	
 	printf("Beginning standard firefly algorithm...\n");
     nffa   = test_ffa(pop_count, dimension, mins, maxs, func);
 
@@ -81,14 +58,46 @@ main(int argc, char **argv)
 	printf("Beginning firefly algorithm with simulated annealing...\n");
 	nffasa = test_ffasa(pop_count, dimension, mins, maxs, func);
 
-	printf("Evaluations necessary to be within epsilon of optima: %ld\n\n", nffasa);
-    
-    
-    //ffa(pop_count, max_gen, dimension, mins, maxs, &rosenbrock);
-    
+	printf("Evaluations necessary to be within epsilon of optima: %ld\n\n", nffasa);    
+	
     free(mins);
     free(maxs);
+	
     return EXIT_SUCCESS;
+};
+
+void 
+init_params(int argc, char **argv, size_t *npop, size_t *ngen, size_t *ndim, double *min, double *max)
+{
+	char c;
+	
+	while ( (c = getopt(argc, argv, "n:g:d:m:x:")) != -1)
+    {
+        switch (c)
+        {
+        case 'n':
+            *npop = atoi(optarg);            
+            break;
+        case 'g':
+            *ngen = atoi(optarg);            
+            break;
+        case 'd':
+            *ndim = atoi(optarg);            
+            break;
+        case 'm':
+            *min = atof(optarg);
+            break;
+        case 'x':
+            *max = atof(optarg);
+            break;
+        case '?':
+            printf("FFlies usage: -n NumberOfFlies -g NumberOfGenerations -d NumberOfDimension -m Min -x Max\n");
+            break;
+        default:
+            printf("FFlies usage: -n NumberOfFlies -g NumberOfGenerations -d NumberOfDimension -m Min -x Max\n");
+            break;
+        }
+    }
 };
 
 double
@@ -160,3 +169,38 @@ rosenbrock(const ffly *fly, const size_t nparams)
     return sum;
 };
         
+double
+michalewicz(const ffly *fly, const size_t nparams)
+{
+	size_t i = 0, j = 0;
+	const size_t m = 10;
+	double x_i = 0.0;
+	double sum = 0.0;
+	double partial = 0.0;
+	
+	for (i = 0; i < nparams; i++)
+	{
+		x_i = fly->params[i];
+		partial = sin((i * (x_i * x_i)) / PI);
+		
+		for (j = 0; j < 2*m; j++)
+		{
+			partial *= partial;
+		}
+	    sum += sin(x_i) * partial;
+	}
+	return -sum;
+};
+
+double
+easom(const ffly *fly, const size_t nparams)
+{
+
+	double x1 = fly->params[0];
+	double x2 = fly->params[1];
+
+	double p1 = (x1-PI) * (x1-PI);
+	double p2 = (x2-PI) * (x2-PI);
+	
+	return -cos(x1) * cos(x2) * exp(-p1 - p2);
+};

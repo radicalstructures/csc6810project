@@ -6,15 +6,15 @@
 #include <omp.h>
 #include <math.h>
 #include <time.h>
-#include <float.h>
+#include <float.h> 
 
 /* 
     Some useful Macros
 */
-#define EPSILON     0.01
+#define EPSILON     0.001
 #define BETA_ZERO   1.0
-#define GAMMA       1.0
-#define ALPHA_ZERO  0.1
+#define GAMMA       0.8
+#define ALPHA_ZERO  0.01
 
 typedef struct _ff
 {
