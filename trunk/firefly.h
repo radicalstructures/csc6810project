@@ -6,11 +6,12 @@
 #include <omp.h>
 #include <math.h>
 #include <time.h>
+#include <float.h>
 
 /* 
     Some useful Macros
 */
-#define EPSILON     0.00001
+#define EPSILON     0.01
 #define BETA_ZERO   1.0
 #define GAMMA       1.0
 #define ALPHA_ZERO  0.1

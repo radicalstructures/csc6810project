@@ -32,19 +32,20 @@ main(int argc, char **argv)
     size_t pop_count = POP_COUNT, max_gen = MAX_GEN;
     size_t i = 0, dimension = 2;
     size_t nffa = 0, nffasa = 0;
+	obj_func func = &rosenbrock;
     
     while ( (c = getopt(argc, argv, "n:g:d:m:x:")) != -1)
     {
         switch (c)
         {
         case 'n':
-            pop_count = atoi(optarg);
+            pop_count = atoi(optarg);            
             break;
         case 'g':
-            max_gen = atoi(optarg);
+            max_gen = atoi(optarg);            
             break;
         case 'd':
-            dimension = atoi(optarg);
+            dimension = atoi(optarg);            
             break;
         case 'm':
             min = atof(optarg);
@@ -71,11 +72,16 @@ main(int argc, char **argv)
         maxs[i] = max;
     }
     
-    
-    nffa   = test_ffa(pop_count, max_gen, dimension, mins, maxs, &akley);
-    nffasa = test_ffasa(pop_count, max_gen, dimension, mins, maxs, &akley);
 
-    printf("FFA: %ld, FFASA: %ld\n", nffa, nffasa);
+	printf("Beginning standard firefly algorithm...\n");
+    nffa   = test_ffa(pop_count, dimension, mins, maxs, func);
+
+	printf("Evaluations necessary to be within epsilon of optima: %ld\n\n", nffa);
+	
+	printf("Beginning firefly algorithm with simulated annealing...\n");
+	nffasa = test_ffasa(pop_count, dimension, mins, maxs, func);
+
+	printf("Evaluations necessary to be within epsilon of optima: %ld\n\n", nffasa);
     
     
     //ffa(pop_count, max_gen, dimension, mins, maxs, &rosenbrock);
@@ -97,7 +103,7 @@ yang(const ffly *fly, const size_t nparams)
         exp(-((x + 4) * (x + 4)) - ((y - 4) * (y - 4))) +
         (2 * (exp(-(x*x) - (y * y)) + exp(-(x*x) - ((y+4) * (y+4)) )));
 
-    return z;
+    return -z;
 };
 
 
@@ -118,7 +124,7 @@ akley(const ffly *fly, const size_t nparams)
     exp1 = exp(-0.2 * sqrt(frac * sumsq));
     exp2 = exp(frac * sumcos);
     
-    return 1.0 / (-20 * exp1 - exp2 + 20 + E);
+    return (-20 * exp1 - exp2 + 20 + E);
 };
         
 double
@@ -133,7 +139,7 @@ schwefel(const ffly *fly, const size_t nparams)
         sum +=  fly->params[i] * sin(sqrt(abs(fly->params[i])));
     }
     
-    return 1.0 / (a * ((double)nparams) * sum);
+    return (a * ((double)nparams) * sum);
 };
         
 double
@@ -149,8 +155,8 @@ rosenbrock(const ffly *fly, const size_t nparams)
         
         part = (fly->params[i+1] - (x * x));
         part *= part;
-        sum += (100 * part) + ( (x - 1) * (x - 1) );
+        sum += (100 * part) + ( (1 - x) * (1 - x) );
     }
-    return 1.0 / sum;
+    return sum;
 };
         
