@@ -6,9 +6,9 @@
 #include <omp.h>
 #include <math.h>
 #include <time.h>
-#include <float.h> 
+#include <float.h>
 
-/* 
+/*
     Some useful Macros
 */
 #define EPSILON     0.001
@@ -18,21 +18,21 @@
 
 typedef struct _ff
 {
-	double *params;
-	double val;
+    double *params;
+    double val;
 } ffly;
 
-/* 
+/*
     Our type declarations
 */
 typedef struct _ffp
 {
-	size_t nfflies;
-	size_t nparams;
-	ffly *flies;
+    size_t nfflies;
+    size_t nparams;
+    ffly *flies;
 } ffly_population;
 
-/* 
+/*
     This will allow for different functions to be passed in for evaluation
 */
 typedef double (*obj_func)(const ffly*, const size_t nparams);
@@ -46,36 +46,35 @@ typedef double (*obj_func)(const ffly*, const size_t nparams);
 /*
     Vanilla Firefly Optimization Algorithm
 */
-void 
-ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, 
-        const double mins[], const double maxs[], obj_func f);
+void
+ffa(const size_t nfireflies, const size_t niteration, const size_t nparams,
+    const double mins[], const double maxs[], obj_func f);
 
 /*
     Firefly + SA  Optimization Algorithm
 */
 void
-ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, 
-        const double mins[], const double maxs[],  obj_func f);
-        
-        
-        
+ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams,
+      const double mins[], const double maxs[],  obj_func f);
+
+
+
 /******************************************
     TEST FUNCTIONS
-    These will run until the flies really aren't moving 
+    These will run until the flies really aren't moving
     much anymore and return the function evaluation count
 ****************************************/
 
 /*
     Vanilla Firefly Optimization Algorithm TEST FUNCTION
 */
-size_t 
-test_ffa(const size_t nfireflies, const size_t nparams, 
-        const double mins[], const double maxs[], obj_func f);
+size_t
+test_ffa(const size_t nfireflies, const size_t nparams,
+         const double mins[], const double maxs[], obj_func f);
 
 /*
     Firefly + SA  Optimization Algorithm  TEST FUNCTION
 */
 size_t
-test_ffasa(const size_t nfireflies, const size_t nparams, 
-        const double mins[], const double maxs[],  obj_func f);
-        
+test_ffasa(const size_t nfireflies, const size_t nparams,
+           const double mins[], const double maxs[],  obj_func f);
