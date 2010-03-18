@@ -103,7 +103,7 @@ ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, cons
     ffly_population *fflies_old = NULL;
 
     const double alpha = ALPHA_ZERO;   //randomness step
-    const double gamma = GAMMA;         //absorption coefficient
+    const double gamma = GAMMA / maxs[0];         //absorption coefficient
 
     //initialize our RNG
     srand(time(NULL));
@@ -140,7 +140,7 @@ test_ffa(const size_t nfireflies, const size_t nparams, const double mins[], con
 
     double min = 0.0, min_old = 0.0;
     const double alpha = ALPHA_ZERO;    //randomness step
-    const double gamma = GAMMA;         //absorption coefficient
+    const double gamma = GAMMA / maxs[0];         //absorption coefficient
 
     //initialize our RNG
     srand(time(NULL));
@@ -181,7 +181,7 @@ ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, co
 
     double alpha = 0.0;
     const double alpha0 = ALPHA_ZERO;   //intial randomness step
-    const double gamma = GAMMA;         //absorption coefficient
+    const double gamma = GAMMA / maxs[0];         //absorption coefficient
 
     //initialize our RNG
     srand(time(NULL));
@@ -223,7 +223,7 @@ test_ffasa(const size_t nfireflies, const size_t nparams, const double mins[], c
     double min = 0.0, min_old = 0.0;
     double alpha = 0.0;
     const double alpha0 = ALPHA_ZERO;   //intial randomness step
-    const double gamma = GAMMA;         //absorption coefficient
+    const double gamma = GAMMA / maxs[0];         //absorption coefficient
 
     //initialize our RNG
     srand(time(NULL));
@@ -259,7 +259,7 @@ test_ffasa(const size_t nfireflies, const size_t nparams, const double mins[], c
 
 
 /*
-        This is what moves our fireflies towards the most attractive flies. Vanilla FFA
+        This is what moves our fireflies towards the most attractive flies.
 */
 static void
 move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
@@ -267,12 +267,12 @@ move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
 {
     size_t i = 0, j = 0;
 
-    size_t nflies = pop->nfflies;
-    size_t nparams = pop->nparams;
+    const size_t nflies = pop->nfflies;
+    const size_t nparams = pop->nparams;
 
     for (i=0; i < nflies; i++)
     {
-        #pragma omp parallel for private(j) shared(nflies, pop, pop_old, f, nparams, alpha, gamma, i, mins, maxs)
+        #pragma omp parallel for private(j) shared(pop, pop_old, f, alpha, i, mins, maxs)
         for (j = 0; j < nflies; j++)
         {
             move_fly(&pop->flies[i], &pop_old->flies[j], f, nparams, alpha, gamma, mins, maxs);         
@@ -288,10 +288,11 @@ move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams,
         const double alpha, const double gamma, const double mins[], const double maxs[])
 {
     size_t i = 0;
+	double beta = 0.0;
     const double beta0 = BETA_ZERO;	//base attraction
     
     fly->val = (*f)(fly, nparams);
-    double jlight = (*f)(old, nparams);
+    const double jlight = (*f)(old, nparams);
 
     if (fly->val > jlight)
     {
@@ -299,13 +300,13 @@ move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams,
         double r = calc_distance(fly, old, nparams);
 
         //determine attractiveness with air density [gamma]
-        double beta = beta0 * exp((-gamma) * (r * r));
+        beta = beta0 * exp((-gamma) * r);
 
         //adjust position with a small random step
         for (i = 0; i < nparams; i++)
         {
             double val = ((1 - beta) * fly->params[i]) + (beta * old->params[i]) + (alpha * (my_rand() - .5));
-            
+			
             //keep within bounds
             fly->params[i] = (val < mins[i]) ? mins[i] : (val > maxs[i]) ? maxs[i] : val;
         }
@@ -357,7 +358,7 @@ output_points(ffly_population *pop, const char *fname)
 /*
     returns value in [0, 1]
 */
-static double
+double
 my_rand(void)
 {
     return ( ( (double)rand() ) / ((double) RAND_MAX ));
