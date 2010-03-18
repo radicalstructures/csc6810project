@@ -1,16 +1,16 @@
 #include "firefly.h"
 
-/* 
-    Static functions not to be used outside of this file 
+/*
+    Static functions not to be used outside of this file
 */
-static void move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f, 
+static void move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
                         double alpha, const double gamma, const double mins[], const double maxs[]);
-static void move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams, 
-                        double alpha, const double gamma, const double mins[], const double maxs[]);
+static void move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams,
+                     double alpha, const double gamma, const double mins[], const double maxs[]);
 
-static ffly_population* init_fflies(const size_t ncount, const size_t nparams, const double mins[], 
-                        const double maxs[]);
-                        
+static ffly_population* init_fflies(const size_t ncount, const size_t nparams, const double mins[],
+                                    const double maxs[]);
+
 static void destroy_fflies(ffly_population *pop);
 static void memcpy_fflies(ffly_population *fflies_old, ffly_population *dest);
 static void memcpy_ffly(ffly *fly, ffly *dest, size_t nparams);
@@ -127,12 +127,12 @@ ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, cons
 
     destroy_fflies(fflies);
     destroy_fflies(fflies_old);
-    return;    
+    return;
 };
 
 size_t
 test_ffa(const size_t nfireflies, const size_t nparams, const double mins[], const double maxs[],
-    obj_func f)
+         obj_func f)
 {
     size_t i = 0;
     ffly_population *fflies = NULL;
@@ -159,20 +159,21 @@ test_ffa(const size_t nfireflies, const size_t nparams, const double mins[], con
         memcpy_fflies(fflies_old, fflies);
 
         //move the flies based on attractiveness
-		move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
+        move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
         i++;
-    } while (mean_delta(fflies, fflies_old) > EPSILON);
+    }
+    while (mean_delta(fflies, fflies_old) > EPSILON);
     output_points(fflies, "end_ffa.dat");
 
     destroy_fflies(fflies);
     destroy_fflies(fflies_old);
 
-    return i * nfireflies;    
+    return i * nfireflies;
 };
 
 void
 ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, const double mins[], const double maxs[],
-    obj_func f)
+      obj_func f)
 {
 
     size_t i = 0;
@@ -200,7 +201,7 @@ ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, co
 
         //calculate our new alpha
         alpha = alpha0 / log(i + 1);
-        
+
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
     }
@@ -208,12 +209,12 @@ ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, co
 
     destroy_fflies(fflies);
     destroy_fflies(fflies_old);
-    return;    
+    return;
 };
 
 size_t
 test_ffasa(const size_t nfireflies, const size_t nparams, const double mins[], const double maxs[],
-    obj_func f)
+           obj_func f)
 {
 
     size_t i = 1;
@@ -247,14 +248,15 @@ test_ffasa(const size_t nfireflies, const size_t nparams, const double mins[], c
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
         i++;
-    } while (mean_delta(fflies, fflies_old) > EPSILON);
-    
+    }
+    while (mean_delta(fflies, fflies_old) > EPSILON);
+
     output_points(fflies, "end_ffasa.dat");
 
     destroy_fflies(fflies);
     destroy_fflies(fflies_old);
-    
-    return (i-1) * nfireflies;    
+
+    return (i-1) * nfireflies;
 };
 
 
@@ -272,10 +274,10 @@ move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
 
     for (i=0; i < nflies; i++)
     {
-        #pragma omp parallel for private(j) shared(pop, pop_old, f, alpha, i, mins, maxs)
+#pragma omp parallel for private(j) shared(pop, pop_old, f, alpha, i, mins, maxs)
         for (j = 0; j < nflies; j++)
         {
-            move_fly(&pop->flies[i], &pop_old->flies[j], f, nparams, alpha, gamma, mins, maxs);         
+            move_fly(&pop->flies[i], &pop_old->flies[j], f, nparams, alpha, gamma, mins, maxs);
         }
     }
 };
@@ -284,13 +286,12 @@ move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
     This moves an individual fly torwards another
 */
 static void
-move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams, 
-        const double alpha, const double gamma, const double mins[], const double maxs[])
+move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams,
+         const double alpha, const double gamma, const double mins[], const double maxs[])
 {
     size_t i = 0;
-	double beta = 0.0;
     const double beta0 = BETA_ZERO;	//base attraction
-    
+
     fly->val = (*f)(fly, nparams);
     const double jlight = (*f)(old, nparams);
 
@@ -300,18 +301,18 @@ move_fly(ffly *fly, ffly *old, obj_func f, const size_t nparams,
         double r = calc_distance(fly, old, nparams);
 
         //determine attractiveness with air density [gamma]
-        beta = beta0 * exp((-gamma) * r);
+        double beta = beta0 * exp((-gamma) * r);
 
         //adjust position with a small random step
         for (i = 0; i < nparams; i++)
         {
             double val = ((1 - beta) * fly->params[i]) + (beta * old->params[i]) + (alpha * (my_rand() - .5));
-			
+
             //keep within bounds
             fly->params[i] = (val < mins[i]) ? mins[i] : (val > maxs[i]) ? maxs[i] : val;
         }
     }
-    
+
 };
 
 /*
@@ -333,7 +334,7 @@ calc_distance(const ffly *fly, const ffly *fly_old, const size_t nparams)
 /*
     writes our points out to a file
 */
-static void 
+static void
 output_points(ffly_population *pop, const char *fname)
 {
 
@@ -367,27 +368,27 @@ my_rand(void)
 /*
     returns the std dev of the objective func values
 */
-static double 
+static double
 std_dev(const ffly_population *pop)
 {
     size_t i = 0;
     double mean = 0.0;
     double sumsq = 0.0;
-    
+
     for (i = 0; i < pop->nfflies; i++)
     {
         mean += pop->flies[i].val;
     }
-    
+
     mean /= ((double)pop->nfflies);
-    
+
     for (i = 0; i < pop->nfflies; i++)
     {
         sumsq += (pop->flies[i].val - mean) * (pop->flies[i].val - mean);
     }
-    
+
     sumsq /= ((double)pop->nfflies);
-    
+
     return sqrt(sumsq);
 };
 
@@ -399,12 +400,12 @@ mean_delta(const ffly_population *pop, const ffly_population *old)
 {
     double sumdelta = 0.0;
     size_t i = 0;
-    
+
     for (i = 0; i < pop->nfflies; i++)
     {
         sumdelta += fabs(old->flies[i].val - pop->flies[i].val);
     }
-    
+
     return sumdelta / ((double)pop->nfflies);
 };
 
