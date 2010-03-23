@@ -11,7 +11,7 @@
 /*
     Some useful Macros
 */
-#define EPSILON     0.001
+#define EPSILON     0.00001
 #define BETA_ZERO   1.0
 #define GAMMA       0.8
 #define ALPHA_ZERO  0.01
@@ -78,3 +78,4 @@ test_ffa(const size_t nfireflies, const size_t nparams,
 size_t
 test_ffasa(const size_t nfireflies, const size_t nparams,
            const double mins[], const double maxs[],  obj_func f);
+           

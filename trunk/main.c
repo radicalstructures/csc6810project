@@ -23,6 +23,7 @@ double schwefel(const ffly *fly, const size_t nparams);
 double rosenbrock(const ffly *fly, const size_t nparams);
 double michalewicz(const ffly *fly, const size_t nparams);
 double easom(const ffly *fly, const size_t nparams);
+double dejung(const ffly *fly, const size_t nparams);
 
 void init_params(int argc, char **argv, size_t *npop, size_t *ngen, size_t *ndim, double *min, double *max);
 
@@ -39,7 +40,7 @@ main(int argc, char **argv)
     init_params(argc, argv, &pop_count, &max_gen, &dimension, &min, &max);
 
     //this should change to be some parameter soon...
-    obj_func func = &akley;
+    obj_func func = &dejung;
 
     mins = (double*)calloc(dimension, sizeof(double));
     maxs = (double*)calloc(dimension, sizeof(double));
@@ -50,6 +51,9 @@ main(int argc, char **argv)
         maxs[i] = max;
     }
 
+    //initialize our PRNG
+    srand48(time(NULL));
+    
     printf("Beginning standard firefly algorithm...\n");
     nffa   = test_ffa(pop_count, dimension, mins, maxs, func);
 
@@ -203,4 +207,17 @@ easom(const ffly *fly, const size_t nparams)
     double p2 = (x2-PI) * (x2-PI);
 
     return -cos(x1) * cos(x2) * exp(-p1 - p2);
+};
+
+double
+dejung(const ffly *fly, const size_t nparams)
+{
+	size_t i = 0;
+	double sum = 0.0;
+
+	for (i = 0; i < nparams; i++)
+	{
+		sum += fly->params[i] * fly->params[i];
+	}
+	return sum;
 };
