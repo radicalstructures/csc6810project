@@ -30,6 +30,7 @@ static ffly_population*
 init_fflies(const size_t ncount, const size_t nparams, const double mins[], const double maxs[], const obj_func f)
 {
     size_t i = 0, j = 0;
+    double range = 0.0;
     ffly_population *pop = NULL;
 
     //create memory chunks for values
@@ -38,13 +39,15 @@ init_fflies(const size_t ncount, const size_t nparams, const double mins[], cons
     pop->nparams = nparams;
     pop->flies = (ffly*)calloc(ncount, sizeof(ffly));
 
+    range = maxs[0] - mins[0];
+    
     //init random positions and zero out light value
     for (i=0; i < ncount; i++)
     {
         pop->flies[i].params = (double*)calloc(nparams, sizeof(double));
         for (j=0; j < nparams; j++)
         {
-            pop->flies[i].params[j] = drand48()*(maxs[j]-mins[j]) + mins[j];
+            pop->flies[i].params[j] = drand48()*(maxs[j]-mins[j]) + mins[j];           
         }
         pop->flies[i].val = (*f)(&pop->flies[i], nparams);
     }
@@ -200,7 +203,7 @@ ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, co
         qsort(fflies, nfireflies, sizeof(ffly), &sort_flies);
         
         //calculate our new alpha
-        alpha = alpha0 / log(i + 1);
+        alpha = alpha0 / log(i);
 
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
@@ -253,7 +256,7 @@ test_ffasa(const size_t nfireflies, const size_t nparams, const double mins[], c
     destroy_fflies(fflies);
     destroy_fflies(fflies_old);
 
-    return (i-1) * nfireflies;
+    return (i-2) * nfireflies;
 };
 
 
