@@ -1,12 +1,13 @@
 #include "firefly.h"
 
+
 /*
     Static functions not to be used outside of this file
 */
 
 static void move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
                         double alpha, const double gamma, const double mins[], const double maxs[]);
-static void move_fly(ffly *fly, ffly *old, const size_t nparams, double alpha, const double gamma, 
+static int move_fly(ffly *fly, ffly *old, const size_t nparams, double alpha, const double gamma, 
                         const double mins[], const double maxs[]);
 
 static ffly_population* init_fflies(const size_t ncount, const size_t nparams, const double mins[],
@@ -17,7 +18,7 @@ static void memcpy_fflies(ffly_population *fflies_old, ffly_population *dest);
 static void memcpy_ffly(ffly *fly, ffly *dest, size_t nparams);
 static void output_points(ffly_population *pop, const char *fname);
 
-static int sort_flies(const void *fly1,const void *fly2);
+static int cmp_flies(const void *fly1,const void *fly2);
 
 static double calc_distance(const ffly *fly, const ffly *fly_old, size_t nparams);
 static double std_dev(const ffly_population *pop);
@@ -41,17 +42,16 @@ init_fflies(const size_t ncount, const size_t nparams, const double mins[], cons
 
     range = maxs[0] - mins[0];
     
-    //init random positions and zero out light value
+    //init random positions and set f value
     for (i=0; i < ncount; i++)
-    {
+    {            
         pop->flies[i].params = (double*)calloc(nparams, sizeof(double));
         for (j=0; j < nparams; j++)
         {
-            pop->flies[i].params[j] = drand48()*(maxs[j]-mins[j]) + mins[j];           
+            pop->flies[i].params[j] = drand48()*(maxs[j]-mins[j]) + mins[j];
         }
         pop->flies[i].val = (*f)(&pop->flies[i], nparams);
     }
-
     return pop;
 };
 
@@ -108,7 +108,7 @@ ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, cons
     ffly_population *fflies_old = NULL;
 
     const double alpha = ALPHA_ZERO;        //randomness step
-    const double gamma = GAMMA / maxs[0];   //absorption coefficient
+    const double gamma = GAMMA / (maxs[0] - mins[0]);   //absorption coefficient
 
     //initialize our firefly array
     fflies = init_fflies(nfireflies, nparams, mins, maxs, f);
@@ -123,7 +123,7 @@ ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, cons
         memcpy_fflies(fflies_old, fflies);
 
         //rank our flies
-        qsort(fflies->flies, nfireflies, sizeof(ffly), &sort_flies);
+        qsort(fflies->flies, nfireflies, sizeof(ffly), &cmp_flies);
         
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
@@ -137,14 +137,14 @@ ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, cons
 
 size_t
 test_ffa(const size_t nfireflies, const size_t nparams, const double mins[], const double maxs[],
-         obj_func f)
+         obj_func f, double *out)
 {
     size_t i = 0;
     ffly_population *fflies = NULL;
     ffly_population *fflies_old = NULL;
 
     const double alpha = ALPHA_ZERO;        //randomness step
-    const double gamma = GAMMA / maxs[0];   //absorption coefficient
+    const double gamma = GAMMA / (maxs[0] - mins[0]);   //absorption coefficient
 
     //initialize our firefly array
     fflies = init_fflies(nfireflies, nparams, mins, maxs, f);
@@ -152,21 +152,24 @@ test_ffa(const size_t nfireflies, const size_t nparams, const double mins[], con
     //initialize our old firefly array
     fflies_old = init_fflies(nfireflies, nparams, mins, maxs, f);
 
-    output_points(fflies, "start_ffa.dat");
-    while (mean_delta(fflies, fflies_old) > EPSILON)
+    //output_points(fflies, "start_ffa.dat");
+    do
     {        
         //keep another copy for move function
         memcpy_fflies(fflies_old, fflies);
 
         //rank our flies
-        //qsort(fflies, nfireflies, sizeof(ffly), &sort_flies);
+        //qsort(fflies, nfireflies, sizeof(ffly), &cmp_flies);
         
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
         i++;
-    }
+    }while (mean_delta(fflies, fflies_old) > EPSILON);
     
-    output_points(fflies, "end_ffa.dat");
+    qsort(fflies->flies, nfireflies, sizeof(ffly), &cmp_flies);
+    *out = fflies->flies[0].val;
+
+    //output_points(fflies, "end_ffa.dat");
 
     destroy_fflies(fflies);
     destroy_fflies(fflies_old);
@@ -185,7 +188,7 @@ ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, co
 
     double alpha = 0.0;
     const double alpha0 = ALPHA_ZERO;       //intial randomness step
-    const double gamma = GAMMA / maxs[0];   //absorption coefficient
+    const double gamma = GAMMA / (maxs[0] - mins[0]);   //absorption coefficient
 
     //initialize our firefly array
     fflies = init_fflies(nfireflies, nparams, mins, maxs, f);
@@ -193,14 +196,14 @@ ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, co
     //initialize our old firefly array
     fflies_old = init_fflies(nfireflies, nparams, mins, maxs, f);
 
-    output_points(fflies, "start_ffasa.dat");
+    //output_points(fflies, "start_ffasa.dat");
     for (i=0; i < niteration; i++)
     {
         //keep another copy for move function
         memcpy_fflies(fflies_old, fflies);
 
         //rank our flies
-        qsort(fflies, nfireflies, sizeof(ffly), &sort_flies);
+        //qsort(fflies, nfireflies, sizeof(ffly), &cmp_flies);
         
         //calculate our new alpha
         alpha = alpha0 / log(i);
@@ -208,7 +211,7 @@ ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, co
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
     }
-    output_points(fflies, "end_ffasa.dat");
+    //output_points(fflies, "end_ffasa.dat");
 
     destroy_fflies(fflies);
     destroy_fflies(fflies_old);
@@ -217,7 +220,7 @@ ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, co
 
 size_t
 test_ffasa(const size_t nfireflies, const size_t nparams, const double mins[], const double maxs[],
-           obj_func f)
+           obj_func f, double *out)
 {
 
     size_t i = 2;
@@ -226,7 +229,7 @@ test_ffasa(const size_t nfireflies, const size_t nparams, const double mins[], c
 
     double alpha = 0.0;
     const double alpha0 = ALPHA_ZERO;       //intial randomness step
-    const double gamma = GAMMA / maxs[0];   //absorption coefficient
+    const double gamma = GAMMA / (maxs[0] - mins[0]);   //absorption coefficient
 
     //initialize our firefly array
     fflies = init_fflies(nfireflies, nparams, mins, maxs, f);
@@ -234,14 +237,14 @@ test_ffasa(const size_t nfireflies, const size_t nparams, const double mins[], c
     //initialize our old firefly array
     fflies_old = init_fflies(nfireflies, nparams, mins, maxs, f);
 
-    output_points(fflies, "start_ffasa.dat");
-    while (mean_delta(fflies, fflies_old) > EPSILON)
+    //output_points(fflies, "start_ffasa.dat");
+    do
     {
         //keep another copy for move function
         memcpy_fflies(fflies_old, fflies);
         
         //rank our flies
-        //qsort(fflies, nfireflies, sizeof(ffly), &sort_flies);
+        //qsort(fflies, nfireflies, sizeof(ffly), &cmp_flies);
         
         //calculate our new alpha
         alpha = alpha0 / log(i);
@@ -249,9 +252,10 @@ test_ffasa(const size_t nfireflies, const size_t nparams, const double mins[], c
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
         i++;
-    }
-
-    output_points(fflies, "end_ffasa.dat");
+    } while (mean_delta(fflies, fflies_old) > EPSILON);
+    //output_points(fflies, "end_ffasa.dat");
+    qsort(fflies->flies, nfireflies, sizeof(ffly), &cmp_flies);
+    *out = fflies->flies[0].val;
 
     destroy_fflies(fflies);
     destroy_fflies(fflies_old);
@@ -267,18 +271,30 @@ static void
 move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
             double alpha, const double gamma, const double mins[], const double maxs[])
 {
-    size_t i = 0, j = 0;
-
+    size_t i = 0, j = 0, k = 0;
+    int moved = 0;
     const size_t nflies = pop->nfflies;
     const size_t nparams = pop->nparams;
 
     for (i=0; i < nflies; i++)
-    {        
+    {   	    
         #pragma omp parallel for private(j) shared(pop, pop_old, f, alpha, i, mins, maxs)
         for (j = 0; j < nflies; j++)
         {
-            move_fly(&pop->flies[i], &pop_old->flies[j], nparams, alpha, gamma, mins, maxs);
+            moved |= move_fly(&pop->flies[i], &pop_old->flies[j], nparams, alpha, gamma, mins, maxs);
         }
+
+	/* we never moved, so move a lil bit randomly*/
+	if (!moved)
+	{
+		double val = 0.0;
+		for (k = 0; k < nparams; k++)
+		{
+			val = pop->flies[i].params[k] + (alpha * (drand48() - 0.5));
+            		pop->flies[i].params[k] = (val < mins[k]) ? mins[k] : (val > maxs[k]) ? maxs[k] : val;
+		}
+	}
+	moved = 0;
         //re-evaluate our current brightness
         pop->flies[i].val = (*f)(&pop->flies[i], nparams);
     }
@@ -287,11 +303,12 @@ move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
 /*
     This moves an individual fly torwards another
 */
-static void
+static int 
 move_fly(ffly *fly, ffly *old, const size_t nparams,
          const double alpha, const double gamma, const double mins[], const double maxs[])
 {
     size_t i = 0;
+    int moved = 0;
     const double beta0 = BETA_ZERO;	//base attraction
 
     if (fly->val > old->val)
@@ -310,8 +327,9 @@ move_fly(ffly *fly, ffly *old, const size_t nparams,
             //keep within bounds
             fly->params[i] = (val < mins[i]) ? mins[i] : (val > maxs[i]) ? maxs[i] : val;
         }
+	moved = 1;
     }
-
+    return moved;
 };
 
 
@@ -319,7 +337,7 @@ move_fly(ffly *fly, ffly *old, const size_t nparams,
     Comparison function for sorting our flies
 */
 static int 
-sort_flies(const void *fly1, const void *fly2)
+cmp_flies(const void *fly1, const void *fly2)
 {
     ffly *f1 = (ffly*)fly1;
     ffly *f2 = (ffly*)fly2;

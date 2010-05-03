@@ -2,7 +2,7 @@
 #include <CUnit/Basic.h>
 #include "../firefly.c"
 
-void test_move_fly(void);
+void test_memcpy_fly(void);
 
 int main()
 {
@@ -20,7 +20,7 @@ int main()
    }
 
    /* add the tests to the suite */
-   if ((NULL == CU_add_test(pSuite, "successful_test_1", test_move_fly)))
+   if ((NULL == CU_add_test(pSuite, "successful_test_1", test_memcpy_fly)))
    {
       CU_cleanup_registry();
       return CU_get_error();
@@ -43,7 +43,7 @@ int main()
 };
 
 void 
-test_move_fly(void)
+test_memcpy_fly(void)
 {
     ffly f1;
     ffly f2;
@@ -57,14 +57,14 @@ test_move_fly(void)
     
     for (i=0; i < 10; i++)
     {
-        f1.params[i] = 2;
-        f2.params[i] = 5;
+        f1.params[i] = 2.1;
+        f2.params[i] = 5.5;
     }
     memcpy_ffly(&f2, &f1, 10);
     
     for (i=0; i < 10; i++)
     {
-        CU_ASSERT(f2.params[i] == 2);
+        CU_ASSERT(f2.params[i] == 2.1);
     }
     CU_ASSERT(f2.val == -101.0);
 

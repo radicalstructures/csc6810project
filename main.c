@@ -32,6 +32,7 @@ main(int argc, char **argv)
 {
     double *mins;
     double *maxs;
+    double out;
     double min=0.0, max=0.0;
     size_t pop_count = POP_COUNT, max_gen = MAX_GEN;
     size_t i = 0, dimension = 2;
@@ -40,7 +41,7 @@ main(int argc, char **argv)
     init_params(argc, argv, &pop_count, &max_gen, &dimension, &min, &max);
 
     //this should change to be some parameter soon...
-    obj_func func = &dejung;
+    obj_func func = &schwefel;
 
     mins = (double*)calloc(dimension, sizeof(double));
     maxs = (double*)calloc(dimension, sizeof(double));
@@ -54,15 +55,12 @@ main(int argc, char **argv)
     //initialize our PRNG
     srand48(time(NULL));
     
-    printf("Beginning standard firefly algorithm...\n");
-    nffa   = test_ffa(pop_count, dimension, mins, maxs, func);
+    nffa = test_ffa(pop_count, dimension, mins, maxs, func, &out);
+    printf("%ld, %.5lf, ", nffa, out);
 
-    printf("Evaluations necessary to be within epsilon of optima: %ld\n\n", nffa);
-
-    printf("Beginning firefly algorithm with simulated annealing...\n");
-    nffasa = test_ffasa(pop_count, dimension, mins, maxs, func);
-
-    printf("Evaluations necessary to be within epsilon of optima: %ld\n\n", nffasa);
+    nffasa = test_ffasa(pop_count, dimension, mins, maxs, func, &out);
+    //ffasa(pop_count, max_gen, dimension, mins, maxs, func);
+    printf("%ld, %.5lf\n", nffasa, out);
 
     free(mins);
     free(maxs);
@@ -75,6 +73,12 @@ init_params(int argc, char **argv, size_t *npop, size_t *ngen, size_t *ndim, dou
 {
     char c;
 
+    if (argc < 8)
+    {
+    	printf("FFlies usage: -n NumberOfFlies [-g NumberOfGenerations] -d NumberOfDimension -m Min -x Max\n");
+	exit(EXIT_FAILURE);
+    }
+    
     while ( (c = getopt(argc, argv, "n:g:d:m:x:")) != -1)
     {
         switch (c)
@@ -130,7 +134,7 @@ akley(const ffly *fly, const size_t nparams)
 
     for (i = 0; i < nparams; i++)
     {
-        sumsq += fly->params[i] * fly->params[i];
+        sumsq += pow(fly->params[i], 2.0);
         sumcos += cos(2 * PI * fly->params[i]);
     }
     frac = 1.0 / ((double) nparams);
@@ -149,10 +153,10 @@ schwefel(const ffly *fly, const size_t nparams)
 
     for (i = 0; i < nparams; i++)
     {
-        sum +=  fly->params[i] * sin(sqrt(abs(fly->params[i])));
+        sum +=  -fly->params[i] * sin(sqrt(fabs(fly->params[i])));
     }
 
-    return (a * ((double)nparams) * sum);
+    return (a * ((double)nparams)) + sum;
 };
 
 double
@@ -176,7 +180,7 @@ rosenbrock(const ffly *fly, const size_t nparams)
 double
 michalewicz(const ffly *fly, const size_t nparams)
 {
-    size_t i = 0, j = 0;
+    size_t i = 0;
     const size_t m = 10;
     double x_i = 0.0;
     double sum = 0.0;
@@ -187,11 +191,7 @@ michalewicz(const ffly *fly, const size_t nparams)
         x_i = fly->params[i];
         partial = sin((i * (x_i * x_i)) / PI);
 
-        for (j = 0; j < 2*m; j++)
-        {
-            partial *= partial;
-        }
-        sum += sin(x_i) * partial;
+        sum += sin(x_i) * pow(partial, 2 * m);
     }
     return -sum;
 };
