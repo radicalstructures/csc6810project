@@ -1,8 +1,10 @@
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 #include "../firefly.c"
+#include "../functions.h"
 
 void test_memcpy_fly(void);
+void test_akley(void);
 
 int main()
 {
@@ -20,7 +22,8 @@ int main()
    }
 
    /* add the tests to the suite */
-   if ((NULL == CU_add_test(pSuite, "successful_test_1", test_memcpy_fly)))
+   if ((NULL == CU_add_test(pSuite, "test_memcpy_fly", test_memcpy_fly)) ||
+				   ((NULL == CU_add_test(pSuite, "test_akley", test_akley)))
    {
       CU_cleanup_registry();
       return CU_get_error();
@@ -73,3 +76,16 @@ test_memcpy_fly(void)
 
 };
 
+void
+test_akley(void)
+{
+	ffly f1;
+	size_t i = 0, n = 5;
+
+	f1.params = calloc(n, sizeof(double));
+	f1.val = 1.0;
+
+	f1.val = akley(&f1, n);
+	CU_ASSERT(f1.val == 0.0);
+	free(f1.params);
+}

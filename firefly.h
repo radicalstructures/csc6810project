@@ -14,7 +14,7 @@
 #define EPSILON     0.001
 #define BETA_ZERO   1.0
 #define GAMMA       0.8
-#define ALPHA_ZERO  0.1
+#define ALPHA_ZERO  0.01
 
 typedef struct _ff
 {
