@@ -9,8 +9,7 @@ class Population:
     NORMAL = 1
     HYBRID = 2
 
-    def __init__(self, gen, size, dim, alpha, \
-            beta, objfunc, style=NORMAL):
+    def __init__(self, gen, size, dim, alpha, beta, objfunc, style=NORMAL):
 
         """ Setup sets the initialization parameters 
             for the population"""
@@ -46,14 +45,14 @@ class Population:
         """ __npop runs the normal firefly algorithm """
 
         for i in xrange(self.gen):
-            self.pop = map(self.__nmappop, self.pop)
+            self.pop = [self.__nmappop(fly) for fly in self.pop]
 
     def __hpop(self):
         """ __hpop runs the hybrid firefly algorithm """
 
         for i in xrange(self.gen):
             self.alpha = self.alpha0 / math.log(i)
-            self.pop = map(self.__hmappop, self.pop)
+            self.pop = [self.__hmappop(fly) for fly in self.pop]
 
     def __nmappop(self, fly):
         """ ___nmappop maps a firefly to its new position """
