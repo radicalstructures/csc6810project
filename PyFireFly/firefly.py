@@ -1,10 +1,12 @@
 """ This module contains the Population class and Firefly class for
     continuous optimization problems"""
-from random import *
-from math import *
+import random
+import math
 from functions import *
 
-def writeCoords(filename, pop):
+def write_coords(filename, pop):
+    """ This function will output the points for each fly in the population """
+
     with open(filename, 'w') as f:
         for fly in pop.pop:
             for coord in fly.coords:
@@ -17,6 +19,7 @@ class Population:
 
     NORMAL = 1
     HYBRID = 2
+    EPSILON = 0.00001
 
     __funcs = {"dejung" : DeJung }
 
@@ -31,7 +34,7 @@ class Population:
         self.gamma = gamma
         self.func = self.__funcs[funcName](dim)
         self.style = style
-        self.rand = Random()
+        self.rand = random.Random()
         self.rand.seed()
         self.pop = self.__generate_pop(size, dim)
         self.oldpop = self.__generate_pop(size, dim)
@@ -48,6 +51,15 @@ class Population:
         self.pop.sort()
         return self.pop[0]
 
+    def test(self):
+        if self.style == Population.NORMAL:
+            self.__testnpop()
+        else:
+            self.__testhpop()
+
+        self.pop.sort()
+        return self.pop[0]
+
     def __generate_pop(self, size, dim):
         """ initializes our population """
         return [FireFly(self.func, self, dim)  for i in xrange(size)]
@@ -59,12 +71,39 @@ class Population:
             self.__copy_pop(self.pop, self.oldpop)
             self.pop = [self.__nmappop(fly) for fly in self.pop]
 
+    def __testnpop(self):
+        """ runs the optimization until the mean values of change are 
+            less than a given epsilon """
+
+        total = 0.0
+        count = len(self.pop)
+
+        while True:
+            self.__copy_pop(self.pop, self.oldpop)
+            self.pop = [self.__nmappop(fly) for fly in self.pop]
+
+            if self.__mean_delta(self.pop, self.oldpop) < self.EPSILON:
+                break
+
+    def __testhpop(self):
+        """ runs the optimization until the mean values of change are
+            less than a given epsilon """
+        i = 2.0
+        while True:
+            self.alpha = self.alpha0 / math.log(i)
+            self.__copy_pop(self.pop, self.oldpop)
+            self.pop = [self.__nmappop(fly) for fly in self.pop]
+            i += 1
+            if self.__mean_delta(self.pop, self.oldpop) < self.EPSILON:
+                break
+            
+
     def __hpop(self):
         """ __hpop runs the hybrid firefly algorithm """
 
         #start at 2 for the log function. do same amount of steps
         for i in xrange(2, self.gen + 2):
-            self.alpha = self.alpha0 / log(i)
+            self.alpha = self.alpha0 / math.log(i)
             self.__copy_pop(self.pop, self.oldpop)
             self.pop = [self.__hmappop(fly) for fly in self.pop]
 
@@ -88,11 +127,19 @@ class Population:
     
     def __copy_pop(self, population, oldpopulation):
         """ copies the population coords to oldpopulation coords """
-        #there must be a better way to copy these without having to make a new list
-        for f in xrange(len(population)):
-            oldpopulation[f].copy(population[f])
+        for i in xrange(len(population)):
+            oldpopulation[i].copy(population[i])
 
+    def __mean_delta(self, population, oldpopulation):
+        """ calculates the mean value of teh change in values """
+        sumdelta = 0.0
+        for i in xrange(len(population)):
+            sumdelta += math.fabs(population[i].val - oldpopulation[i].val)
 
+        print str(sumdelta / float(len(population)))
+        return sumdelta / float(len(population))
+
+    
 class FireFly:
     """ A FireFly is a point in hyperdimensional space """
 
@@ -168,16 +215,18 @@ class FireFly:
 
     def __calculate_dist(self, fly):
         """ calculates the euclidean distance between flies """
-        sum = 0.0
+        totalsum = 0.0
         for i in xrange(len(self.coords)):
-            sum += (self.coords[i] - fly.coords[i])**2
+            totalsum += (self.coords[i] - fly.coords[i])**2
 
-        return sqrt(sum)
+        return math.sqrt(totalsum)
 
     def __calculate_beta(self, dist, beta0, gamma):
-        return beta0 * exp((-gamma) * (dist**2))
+        """ calculates the value of beta, or attraction """
+        return beta0 * math.exp((-gamma) * (dist**2))
 
 
 def flyfold(fly, otherfly):
+    """ this is the function used for folding over a list of flies """
     return fly.nfoldf(otherfly)
 
