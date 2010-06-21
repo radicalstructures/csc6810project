@@ -57,9 +57,9 @@ class Population:
             the values is less than EPSILON """
 
         if self.style == Population.NORMAL:
-            self.__testnpop()
+            self.__test_population()
         else:
-            self.__testhpop()
+            self.__hybrid_test_population()
 
         self.pop.sort()
         return self.pop[0]
@@ -76,9 +76,9 @@ class Population:
             #copy our population over to old one as well
             self.__copy_pop()
             #map our current population to a new one
-            self.pop = pool.map(flynmap, self.pop)
+            self.pop = pool.map(map_fly, self.pop)
 
-    def __testnpop(self):
+    def __test_population(self):
         """ runs the optimization until the mean values of change are 
             less than a given epsilon """
 
@@ -89,9 +89,9 @@ class Population:
             #copy our population over to old one as well
             self.__copy_pop()
             #map our current population to a new one
-            self.pop = pool.map(flynmap, self.pop)
+            self.pop = pool.map(map_fly, self.pop)
 
-            #calculate our the delta of the means
+            #calculate the delta of the means
             avg = self.__mean()
             val = math.fabs(avg - oldavg)
 
@@ -100,7 +100,7 @@ class Population:
             
             oldavg = avg
 
-    def __testhpop(self):
+    def __hybrid_test_population(self):
         """ runs the optimization until the mean values of change are
             less than a given epsilon """
         pool = Pool()
@@ -115,9 +115,9 @@ class Population:
             #copy our population over to old one as well
             self.__copy_pop()
             #map our current population to a new one
-            self.pop = pool.map(flyhmap, self.pop)
+            self.pop = pool.map(hybrid_map_fly, self.pop)
 
-            #calculate our the delta of the means
+            #calculate the delta of the means
             avg = self.__mean()
             val = math.fabs(avg - oldavg)
 
@@ -140,38 +140,12 @@ class Population:
             #copy our population over to old one as well
             self.__copy_pop()
             #map our current population to a new one
-            self.pop = pool.map(flyhmap, self.pop)
+            self.pop = pool.map(hybrid_map_fly, self.pop)
 
-    def __nmappop(self, fly):
-        """ ___nmappop maps a firefly to its new position """
-        fly.moved = False
-        fly = reduce(flyfold, self.oldpop, fly)
-        fly.eval()
-        return fly
-
-    def __hmappop(self, fly):
-        """ __hmappop maps a firefly to its new 
-            position using the hybrid technique """
-
-        fly.moved = False
-        fly = reduce(flyfold, self.oldpop, fly)
-        if not fly.moved:
-            fly.move_random()
-        fly.eval()
-        return fly
-    
     def __copy_pop(self):
         """ copies the population coords to oldpopulation coords """
         for i in xrange(len(self.pop)):
             self.oldpop[i].copy(self.pop[i])
-
-    def __mean_delta(self):
-        """ calculates the mean value of teh change in values """
-        sumdelta = 0.0
-        for i in xrange(len(self.pop)):
-            sumdelta += math.fabs(self.pop[i].val - self.oldpop[i].val)
-
-        return sumdelta
 
     def __mean(self):
         """ calculates the mean value of the population """
@@ -215,8 +189,13 @@ class FireFly:
         for i in xrange(len(fly.coords)):
             self.coords[i] = fly.coords[i]
 
-    def hmap(self):
-        """ hmap maps a firefly to its new 
+    def map(self):
+        """ nmap maps a firefly to its new position """
+        reduce(flyfold, self.pop.oldpop, self)
+        self.eval()
+
+    def hybrid_map(self):
+        """ hybrid_map maps a firefly to its new 
             position using the hybrid technique """
 
         self.moved = False
@@ -235,13 +214,6 @@ class FireFly:
             beta = self.__calculate_beta(dist, self.pop.beta0, self.pop.gamma)
             #move towards fly
             self.move(self.pop.alpha, beta, self.pop.rand, fly)
-
-        return self
-
-    def nmap(self):
-        """ nmap maps a firefly to its new position """
-        reduce(flyfold, self.pop.oldpop, self)
-        self.eval()
 
     def move(self, alpha, beta, rand, fly):
         """ moves towards another fly based on the 
@@ -285,14 +257,15 @@ class FireFly:
 #These functions just help with the higher order functions
 def flyfold(fly, otherfly):
     """ this is the function used for folding over a list of flies """
-    return fly.nfoldf(otherfly)
-
-def flynmap(fly):
-    """ this is a weird workaround to be able to use the pool """
-    fly.nmap()
+    fly.nfoldf(otherfly)
     return fly
 
-def flyhmap(fly):
+def map_fly(fly):
     """ this is a weird workaround to be able to use the pool """
-    fly.hmap()
+    fly.map()
+    return fly
+
+def hybrid_map_fly(fly):
+    """ this is a weird workaround to be able to use the pool """
+    fly.hybrid_map()
     return fly
