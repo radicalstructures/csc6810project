@@ -57,9 +57,11 @@ class Population:
             the values is less than EPSILON """
 
         if self.style == Population.NORMAL:
-            self.__test_population()
+            count = self.__test_population()
+            print "test did " + str(count) + " evaluations"
         else:
-            self.__hybrid_test_population()
+            count = self.__hybrid_test_population()
+            print "hybrid test did " + str(count) + " evaluations"
 
         self.pop.sort()
         return self.pop[0]
@@ -80,8 +82,9 @@ class Population:
 
     def __test_population(self):
         """ runs the optimization until the mean values of change are 
-            less than a given epsilon """
-
+            less than a given epsilon. Returns the amount of function
+            evaluations """
+        i = 0
         pool = Pool()
         oldavg = self.__mean()
 
@@ -99,10 +102,15 @@ class Population:
                 break
             
             oldavg = avg
+            i += 1
+
+        return i * len(self.pop) 
 
     def __hybrid_test_population(self):
         """ runs the optimization until the mean values of change are
-            less than a given epsilon """
+            less than a given epsilon. Returns the amoung of function
+            evaluations """
+
         pool = Pool()
         i = 2.0
 
@@ -120,12 +128,14 @@ class Population:
             #calculate the delta of the means
             avg = self.__mean()
             val = math.fabs(avg - oldavg)
-
+            
             i += 1
             if val < Population.EPSILON:
                 break
             
             oldavg = avg
+
+        return int(i - 2) * len(self.pop)
 
     def __hpop(self):
         """ __hpop runs the hybrid firefly algorithm """
