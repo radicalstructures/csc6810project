@@ -2,6 +2,7 @@
     continuous optimization problems"""
 import random
 import math
+from multiprocessing import Pool
 from functions import *
 
 def write_coords(filename, pop):
@@ -23,7 +24,7 @@ class Population:
 
     __funcs = {"dejung" : DeJung }
 
-    def __init__(self, gen, size, dim, alpha, beta, gamma, funcName, style=NORMAL):
+    def __init__(self, gen, size, dim, alpha, beta, gamma, func_name, style=NORMAL):
 
         """ Setup sets the initialization parameters 
             for the population"""
@@ -32,7 +33,7 @@ class Population:
         self.alpha = self.alpha0 = alpha
         self.beta0 = beta
         self.gamma = gamma
-        self.func = self.__funcs[funcName](dim)
+        self.func = self.__funcs[func_name](dim)
         self.style = style
         self.rand = random.Random()
         self.rand.seed()
@@ -52,6 +53,9 @@ class Population:
         return self.pop[0]
 
     def test(self):
+        """ Runs the Firefly algorithm until the mean delta of
+            the values is less than EPSILON """
+
         if self.style == Population.NORMAL:
             self.__testnpop()
         else:
@@ -67,45 +71,57 @@ class Population:
     def __npop(self):
         """ __npop runs the normal firefly algorithm """
 
+        pool = Pool()
         for i in xrange(self.gen):
-            self.__copy_pop(self.pop, self.oldpop)
-            self.pop = [self.__nmappop(fly) for fly in self.pop]
+            self.__copy_pop()
+            #self.pop = [self.__nmappop(fly) for fly in self.pop]
+            self.pop = pool.map(flynmap, self.pop)
 
     def __testnpop(self):
         """ runs the optimization until the mean values of change are 
             less than a given epsilon """
 
         total = 0.0
-        count = len(self.pop)
+        count = 0.0
+        pool = Pool()
 
         while True:
-            self.__copy_pop(self.pop, self.oldpop)
-            self.pop = [self.__nmappop(fly) for fly in self.pop]
+            self.__copy_pop()
+            #self.pop = [self.__nmappop(fly) for fly in self.pop]
+            self.pop = pool.map(flynmap, self.pop)
 
-            if self.__mean_delta(self.pop, self.oldpop) < self.EPSILON:
+            total += self.__mean_delta()
+            count += float(len(self.pop))
+            print str(total / count)
+
+            if float(total / count) < Population.EPSILON:
                 break
 
     def __testhpop(self):
         """ runs the optimization until the mean values of change are
             less than a given epsilon """
+        pool = Pool()
         i = 2.0
         while True:
             self.alpha = self.alpha0 / math.log(i)
-            self.__copy_pop(self.pop, self.oldpop)
-            self.pop = [self.__nmappop(fly) for fly in self.pop]
+            self.__copy_pop()
+            #self.pop = [self.__nmappop(fly) for fly in self.pop]
+            self.pop = pool.map(flyhmap, self.pop)
             i += 1
-            if self.__mean_delta(self.pop, self.oldpop) < self.EPSILON:
+            if self.__mean_delta() < Population.EPSILON:
                 break
             
 
     def __hpop(self):
         """ __hpop runs the hybrid firefly algorithm """
 
+        pool = Pool()
         #start at 2 for the log function. do same amount of steps
         for i in xrange(2, self.gen + 2):
             self.alpha = self.alpha0 / math.log(i)
-            self.__copy_pop(self.pop, self.oldpop)
-            self.pop = [self.__hmappop(fly) for fly in self.pop]
+            self.__copy_pop()
+            #self.pop = [self.__hmappop(fly) for fly in self.pop]
+            self.pop = pool.map(flyhmap, self.pop)
 
     def __nmappop(self, fly):
         """ ___nmappop maps a firefly to its new position """
@@ -125,19 +141,18 @@ class Population:
         fly.eval()
         return fly
     
-    def __copy_pop(self, population, oldpopulation):
+    def __copy_pop(self):
         """ copies the population coords to oldpopulation coords """
-        for i in xrange(len(population)):
-            oldpopulation[i].copy(population[i])
+        for i in xrange(len(self.pop)):
+            self.oldpop[i].copy(self.pop[i])
 
-    def __mean_delta(self, population, oldpopulation):
+    def __mean_delta(self):
         """ calculates the mean value of teh change in values """
         sumdelta = 0.0
-        for i in xrange(len(population)):
-            sumdelta += math.fabs(population[i].val - oldpopulation[i].val)
+        for i in xrange(len(self.pop)):
+            sumdelta += math.fabs(self.pop[i].val - self.oldpop[i].val)
 
-        print str(sumdelta / float(len(population)))
-        return sumdelta / float(len(population))
+        return sumdelta 
 
     
 class FireFly:
@@ -174,6 +189,16 @@ class FireFly:
         for i in xrange(len(fly.coords)):
             self.coords[i] = fly.coords[i]
 
+    def hmap(self):
+        """ hmap maps a firefly to its new 
+            position using the hybrid technique """
+
+        self.moved = False
+        reduce(flyfold, self.pop.oldpop, self)
+        if not self.moved:
+            self.move_random()
+        self.eval()
+
     def nfoldf(self, fly):
         """ our fold function to use over a list of flies """
 
@@ -184,10 +209,13 @@ class FireFly:
             beta = self.__calculate_beta(dist, self.pop.beta0, self.pop.gamma)
             #move towards fly
             self.move(self.pop.alpha, beta, self.pop.rand, fly)
-            #we moved
-            self.moved = True
 
         return self
+
+    def nmap(self):
+        """ nmap maps a firefly to its new position """
+        reduce(flyfold, self.pop.oldpop, self)
+        self.eval()
 
     def move(self, alpha, beta, rand, fly):
         """ moves towards another fly based on the 
@@ -200,6 +228,8 @@ class FireFly:
             # set as coord if within bounds
             self.coords[i] = self.func.mins[i] if tval < self.func.mins[i] \
                     else self.func.maxs[i] if tval > self.func.maxs[i] else tval
+        #we moved
+        self.moved = True
 
     def move_random(self):
         """ moves a little random bit"""
@@ -230,3 +260,12 @@ def flyfold(fly, otherfly):
     """ this is the function used for folding over a list of flies """
     return fly.nfoldf(otherfly)
 
+def flynmap(fly):
+    """ this is a weird workaround to be able to use the pool """
+    fly.nmap()
+    return fly
+
+def flyhmap(fly):
+    """ this is a weird workaround to be able to use the pool """
+    fly.hmap()
+    return fly
