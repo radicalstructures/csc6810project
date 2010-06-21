@@ -20,3 +20,4 @@ class ObjFunc:
     def eval(self, coords):
         """ Evaluates the function """
         return self.func(coords)
+
