@@ -8,11 +8,11 @@ from functions import *
 def write_coords(filename, pop):
     """ This function will output the points for each fly in the population """
 
-    with open(filename, 'w') as f:
+    with open(filename, 'w') as outputfile:
         for fly in pop.pop:
             for coord in fly.coords:
-                f.write(str(coord) + " ")
-            f.write("\n")
+                outputfile.write(str(coord) + " ")
+            outputfile.write("\n")
 
 class Population:
     """ The Population class is responsible for maintaining the fireflies and
@@ -73,44 +73,59 @@ class Population:
 
         pool = Pool()
         for i in xrange(self.gen):
+            #copy our population over to old one as well
             self.__copy_pop()
-            #self.pop = [self.__nmappop(fly) for fly in self.pop]
+            #map our current population to a new one
             self.pop = pool.map(flynmap, self.pop)
 
     def __testnpop(self):
         """ runs the optimization until the mean values of change are 
             less than a given epsilon """
 
-        total = 0.0
-        count = 0.0
         pool = Pool()
+        oldavg = self.__mean()
 
         while True:
+            #copy our population over to old one as well
             self.__copy_pop()
-            #self.pop = [self.__nmappop(fly) for fly in self.pop]
+            #map our current population to a new one
             self.pop = pool.map(flynmap, self.pop)
 
-            total += self.__mean_delta()
-            count += float(len(self.pop))
-            print str(total / count)
+            #calculate our the delta of the means
+            avg = self.__mean()
+            val = math.fabs(avg - oldavg)
 
-            if float(total / count) < Population.EPSILON:
+            if val < Population.EPSILON:
                 break
+            
+            oldavg = avg
 
     def __testhpop(self):
         """ runs the optimization until the mean values of change are
             less than a given epsilon """
         pool = Pool()
         i = 2.0
+
+        oldavg = self.__mean()
         while True:
+            #calculate our new alpha value based on the annealing schedule
+            #this may change to allow for a user chosen schedule
             self.alpha = self.alpha0 / math.log(i)
+            
+            #copy our population over to old one as well
             self.__copy_pop()
-            #self.pop = [self.__nmappop(fly) for fly in self.pop]
+            #map our current population to a new one
             self.pop = pool.map(flyhmap, self.pop)
+
+            #calculate our the delta of the means
+            avg = self.__mean()
+            val = math.fabs(avg - oldavg)
+
             i += 1
-            if self.__mean_delta() < Population.EPSILON:
+            if val < Population.EPSILON:
                 break
             
+            oldavg = avg
 
     def __hpop(self):
         """ __hpop runs the hybrid firefly algorithm """
@@ -118,9 +133,13 @@ class Population:
         pool = Pool()
         #start at 2 for the log function. do same amount of steps
         for i in xrange(2, self.gen + 2):
+            #calculate our new alpha value based on the annealing schedule
+            #this may change to allow for a user chosen schedule
             self.alpha = self.alpha0 / math.log(i)
+            
+            #copy our population over to old one as well
             self.__copy_pop()
-            #self.pop = [self.__hmappop(fly) for fly in self.pop]
+            #map our current population to a new one
             self.pop = pool.map(flyhmap, self.pop)
 
     def __nmappop(self, fly):
@@ -152,9 +171,16 @@ class Population:
         for i in xrange(len(self.pop)):
             sumdelta += math.fabs(self.pop[i].val - self.oldpop[i].val)
 
-        return sumdelta 
+        return sumdelta
 
-    
+    def __mean(self):
+        """ calculates the mean value of the population """
+        meanval = 0.0
+        for fly in self.pop:
+            meanval += fly.val
+
+        return meanval / float(len(self.pop))
+
 class FireFly:
     """ A FireFly is a point in hyperdimensional space """
 
@@ -256,6 +282,7 @@ class FireFly:
         return beta0 * math.exp((-gamma) * (dist**2))
 
 
+#These functions just help with the higher order functions
 def flyfold(fly, otherfly):
     """ this is the function used for folding over a list of flies """
     return fly.nfoldf(otherfly)
