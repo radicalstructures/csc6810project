@@ -2,6 +2,8 @@
     continuous optimization problems"""
 import random
 import math
+from BIP.Bayes.lhs import lhs
+from scipy.stats import uniform
 from multiprocessing import Pool
 from functions import *
 
@@ -24,27 +26,29 @@ class Population:
 
     __funcs = {"dejung" : DeJung }
 
-    def __init__(self, gen, size, dim, alpha, beta, gamma, func_name, style=NORMAL):
+    def __init__(self, gen, size, alpha, beta, gamma):
 
         """ Setup sets the initialization parameters 
             for the population"""
 
         self.gen = gen
+        self.size = size
         self.alpha = self.alpha0 = alpha
         self.beta0 = beta
         self.gamma = gamma
-        self.func = self.__funcs[func_name](dim)
-        self.style = style
         self.rand = random.Random()
         self.rand.seed()
-        self.pop = self.__generate_pop(size, dim)
-        self.oldpop = self.__generate_pop(size, dim)
+        self.pop = self.oldpop = None
 
-    def run(self):
+    def run(self, func_name, dimension_count, style=NORMAL):
         """ Run begins the optimization based 
             on the initialization parameters given """
-        
-        if self.style == Population.NORMAL:
+
+        func = self.__funcs[func_name](dimension_count)
+        self.pop = self.__generate_pop(self.size, dimension_count, func)
+        self.oldpop = self.__generate_pop(self.size, dimension_count, func)
+
+        if style == Population.NORMAL:
             self.__npop()
         else:
             self.__hpop()
@@ -52,11 +56,15 @@ class Population:
         self.pop.sort()
         return self.pop[0]
 
-    def test(self):
+    def test(self, func_name, dimension_count, style=NORMAL):
         """ Runs the Firefly algorithm until the mean delta of
             the values is less than EPSILON """
 
-        if self.style == Population.NORMAL:
+        func = self.__funcs[func_name](dimension_count)
+        self.pop = self.__generate_pop(self.size, dimension_count, func)
+        self.oldpop = self.__generate_pop(self.size, dimension_count, func)
+
+        if style == Population.NORMAL:
             count = self.__test_population()
             print "test did " + str(count) + " evaluations"
         else:
@@ -66,15 +74,15 @@ class Population:
         self.pop.sort()
         return self.pop[0]
 
-    def __generate_pop(self, size, dim):
+    def __generate_pop(self, size, dim, func):
         """ initializes our population """
-        return [FireFly(self.func, self, dim)  for i in xrange(size)]
+        return [FireFly(func, self, dim)  for _ in xrange(size)]
 
     def __npop(self):
         """ __npop runs the normal firefly algorithm """
 
         pool = Pool()
-        for i in xrange(self.gen):
+        for _ in xrange(self.gen):
             #copy our population over to old one as well
             self.__copy_pop()
             #map our current population to a new one
@@ -86,7 +94,6 @@ class Population:
             evaluations """
         i = 0
         pool = Pool()
-        oldavg = self.__mean()
 
         while True:
             #copy our population over to old one as well
@@ -95,13 +102,9 @@ class Population:
             self.pop = pool.map(map_fly, self.pop)
 
             #calculate the delta of the means
-            avg = self.__mean()
-            val = math.fabs(avg - oldavg)
-
-            if val < Population.EPSILON:
+            if self.__delta_of_means() < Population.EPSILON:
                 break
             
-            oldavg = avg
             i += 1
 
         return i * len(self.pop) 
@@ -114,7 +117,6 @@ class Population:
         pool = Pool()
         i = 2.0
 
-        oldavg = self.__mean()
         while True:
             #calculate our new alpha value based on the annealing schedule
             #this may change to allow for a user chosen schedule
@@ -126,14 +128,10 @@ class Population:
             self.pop = pool.map(hybrid_map_fly, self.pop)
 
             #calculate the delta of the means
-            avg = self.__mean()
-            val = math.fabs(avg - oldavg)
-            
-            i += 1
-            if val < Population.EPSILON:
+            if self.__delta_of_means() < Population.EPSILON:
                 break
             
-            oldavg = avg
+            i += 1
 
         return int(i - 2) * len(self.pop)
 
@@ -157,13 +155,17 @@ class Population:
         for i in xrange(len(self.pop)):
             self.oldpop[i].copy(self.pop[i])
 
-    def __mean(self):
-        """ calculates the mean value of the population """
-        meanval = 0.0
-        for fly in self.pop:
-            meanval += fly.val
+    def __delta_of_means(self):
+        """ calculates the delta of the mean values """
+        average = oldaverage = 0.0
+        for i in xrange(len(self.pop)):
+            average += self.pop[i].val
+            oldaverage += self.oldpop[i].val
 
-        return meanval / float(len(self.pop))
+        average = average / len(self.pop)
+        oldaverage = oldaverage / len(self.pop)
+
+        return math.fabs(average - oldaverage)
 
 class FireFly:
     """ A FireFly is a point in hyperdimensional space """
@@ -171,7 +173,7 @@ class FireFly:
     def __init__(self, objfunc, population, dim):
         self.func = objfunc
         self.pop = population
-        self.coords = [(self.pop.rand.random()*(self.func.maxs[x] - self.func.mins[x]) + self.func.mins[x]) for x in xrange(dim)]
+        self.coords = uniform_dist(self.pop.rand, self.func.maxs, self.func.mins, dim)
         self.val = self.func.eval(self.coords)
         self.moved = False
 
@@ -263,6 +265,26 @@ class FireFly:
         """ calculates the value of beta, or attraction """
         return beta0 * math.exp((-gamma) * (dist**2))
 
+#This is for generating our initial distributions
+def uniform_dist(rand, maxs, mins, dim):
+    """ this returns a list of coordinates from a 
+        uniform distribution """
+    return [(rand.random()*(maxs[x] - mins[x]) + mins[x]) for x in xrange(dim)]
+
+def lhs_dist(rand, maxs, mins, dim):
+    """ this returns a list of coordinates from a 
+        latin-hypercube distribution """
+    iterations = dim
+    segment_size = 1.0 / float(iterations)
+    
+    def inner_lhs(i, rand, segment_size, maxs, mins):
+        """ lets define this to make a list comprehension nice and small """
+        segment_min = i * segment_size
+        point = segment_min + (rand.random() * segment_size)
+        return (point * (maxs[i] - mins[i])) + mins[i]
+    
+    return [inner_lhs(i, rand, segment_size, maxs, mins) for i in range(iterations)]
+
 
 #These functions just help with the higher order functions
 def flyfold(fly, otherfly):
@@ -279,3 +301,4 @@ def hybrid_map_fly(fly):
     """ this is a weird workaround to be able to use the pool """
     fly.hybrid_map()
     return fly
+
