@@ -1,7 +1,7 @@
 """ This module contains the Population class and Firefly class for
     continuous optimization problems"""
-import random
 import math
+import numpy as np
 from BIP.Bayes.lhs import lhs
 from scipy.stats import uniform
 from multiprocessing import Pool
@@ -24,29 +24,33 @@ class Population:
     HYBRID = 2
     EPSILON = 0.00001
 
-    __funcs = {"dejung" : DeJung }
+    __funcs = { "dejung" : DeJung ,
+            "ackley" : Ackley}
 
     def __init__(self, gen, size, alpha, beta, gamma):
 
         """ Setup sets the initialization parameters 
             for the population"""
-
         self.gen = gen
         self.size = size
         self.alpha = self.alpha0 = alpha
         self.beta0 = beta
-        self.gamma = gamma
-        self.rand = random.Random()
-        self.rand.seed()
+        self.gamma = self.gamma0 = gamma
         self.pop = self.oldpop = None
 
     def run(self, func_name, dimension_count, style=NORMAL):
         """ Run begins the optimization based 
             on the initialization parameters given """
 
+        #get the actual function
         func = self.__funcs[func_name](dimension_count)
+        
+        #create our populations
         self.pop = self.__generate_pop(self.size, dimension_count, func)
         self.oldpop = self.__generate_pop(self.size, dimension_count, func)
+        
+        #scale our gamma 
+        self.gamma = self.gamma0 / (func.maxs[0] - func.mins[0])
 
         if style == Population.NORMAL:
             self.__npop()
@@ -60,23 +64,42 @@ class Population:
         """ Runs the Firefly algorithm until the mean delta of
             the values is less than EPSILON """
 
+        #get the actual function
         func = self.__funcs[func_name](dimension_count)
+        
+        #create our populations
         self.pop = self.__generate_pop(self.size, dimension_count, func)
         self.oldpop = self.__generate_pop(self.size, dimension_count, func)
 
+        #scale our gamma 
+        self.gamma = self.gamma0 / (func.maxs[0] - func.mins[0])
+
         if style == Population.NORMAL:
             count = self.__test_population()
-            print "test did " + str(count) + " evaluations"
+            line = "test did " + str(count) + " evaluations"
         else:
             count = self.__hybrid_test_population()
-            print "hybrid test did " + str(count) + " evaluations"
+            line = "hybrid test did " + str(count) + " evaluations"
 
+        print line
         self.pop.sort()
         return self.pop[0]
 
     def __generate_pop(self, size, dim, func):
         """ initializes our population """
-        return [FireFly(func, self, dim)  for _ in xrange(size)]
+         
+        # if dimensions are higher than 5, use the 
+        # Latin hyper cube to sample, otherwise use 
+        # multivariate uniform
+        if dim > 5:
+            params = [(func.mins[i], func.maxs[i] - func.mins[i]) for i in xrange(dim)]
+            seeds = np.array(lhs([uniform]*dim, params, size, False, np.identity(dim))).T
+        else:
+            loc = func.mins[0]
+            scale = func.maxs[0] - func.mins
+            seeds = [uniform.rvs(loc, scale, dim) for seed in xrange(size)]
+
+        return [FireFly(func, self, dim, seeds[i])  for i in xrange(size)]
 
     def __npop(self):
         """ __npop runs the normal firefly algorithm """
@@ -99,10 +122,13 @@ class Population:
             #copy our population over to old one as well
             self.__copy_pop()
             #map our current population to a new one
-            self.pop = pool.map(map_fly, self.pop)
+            self.pop = map(map_fly, self.pop)
+            
+            dm = self.__delta_of_means()
+            print dm
 
             #calculate the delta of the means
-            if self.__delta_of_means() < Population.EPSILON:
+            if dm < Population.EPSILON:
                 break
             
             i += 1
@@ -125,10 +151,11 @@ class Population:
             #copy our population over to old one as well
             self.__copy_pop()
             #map our current population to a new one
-            self.pop = pool.map(hybrid_map_fly, self.pop)
-
+            self.pop = map(hybrid_map_fly, self.pop)
+            dm = self.__delta_of_means()
+            print dm
             #calculate the delta of the means
-            if self.__delta_of_means() < Population.EPSILON:
+            if dm < Population.EPSILON:
                 break
             
             i += 1
@@ -170,10 +197,10 @@ class Population:
 class FireFly:
     """ A FireFly is a point in hyperdimensional space """
 
-    def __init__(self, objfunc, population, dim):
+    def __init__(self, objfunc, population, dim, seeds):
         self.func = objfunc
         self.pop = population
-        self.coords = uniform_dist(self.pop.rand, self.func.maxs, self.func.mins, dim)
+        self.coords = np.array(seeds) #self.__init_coords(seeds, self.func.maxs, self.func.mins, dim)
         self.val = self.func.eval(self.coords)
         self.moved = False
 
@@ -225,16 +252,16 @@ class FireFly:
             #calculate the attractiveness beta
             beta = self.__calculate_beta(dist, self.pop.beta0, self.pop.gamma)
             #move towards fly
-            self.move(self.pop.alpha, beta, self.pop.rand, fly)
+            self.move(self.pop.alpha, beta, fly)
 
-    def move(self, alpha, beta, rand, fly):
+    def move(self, alpha, beta, fly):
         """ moves towards another fly based on the 
             values of alpha and beta """
 
         for i in xrange(len(self.coords)):
             # calc the temp value to set as coord
             tval = ((1 - beta) * fly.coords[i]) + \
-                    (beta * self.coords[i]) + (alpha * (rand.random() - 0.5))
+                    (beta * self.coords[i]) + (alpha * (uniform.rvs() - 0.5))
             # set as coord if within bounds
             self.coords[i] = self.func.mins[i] if tval < self.func.mins[i] \
                     else self.func.maxs[i] if tval > self.func.maxs[i] else tval
@@ -244,11 +271,10 @@ class FireFly:
     def move_random(self):
         """ moves a little random bit"""
         alpha = self.pop.alpha
-        rand = self.pop.rand
 
         for i in xrange(len(self.coords)):
             # calc the temp value to set as coord
-            tval = self.coords[i] + (alpha * (rand.random() - 0.5))
+            tval = self.coords[i] + (alpha * (uniform.rvs() - 0.5))
             # set as coord if within bounds
             self.coords[i] = self.func.mins[i] if tval < self.func.mins[i] \
                     else self.func.maxs[i] if tval > self.func.maxs[i] else tval
@@ -264,27 +290,6 @@ class FireFly:
     def __calculate_beta(self, dist, beta0, gamma):
         """ calculates the value of beta, or attraction """
         return beta0 * math.exp((-gamma) * (dist**2))
-
-#This is for generating our initial distributions
-def uniform_dist(rand, maxs, mins, dim):
-    """ this returns a list of coordinates from a 
-        uniform distribution """
-    return [(rand.random()*(maxs[x] - mins[x]) + mins[x]) for x in xrange(dim)]
-
-def lhs_dist(rand, maxs, mins, dim):
-    """ this returns a list of coordinates from a 
-        latin-hypercube distribution """
-    iterations = dim
-    segment_size = 1.0 / float(iterations)
-    
-    def inner_lhs(i, rand, segment_size, maxs, mins):
-        """ lets define this to make a list comprehension nice and small """
-        segment_min = i * segment_size
-        point = segment_min + (rand.random() * segment_size)
-        return (point * (maxs[i] - mins[i])) + mins[i]
-    
-    return [inner_lhs(i, rand, segment_size, maxs, mins) for i in range(iterations)]
-
 
 #These functions just help with the higher order functions
 def flyfold(fly, otherfly):
