@@ -46,8 +46,8 @@ class Population:
         func = self._funcs[func_name](dimension_count)
         
         #create our populations
-        self.pop = self._generate_pop(self.size, dimension_count, func)
-        self.oldpop = self._generate_pop(self.size, dimension_count, func)
+        self.pop = self._generate_pop(self.size, func)
+        self.oldpop = self._generate_pop(self.size, func)
         
         #scale our gamma 
         self.gamma = self.gamma0 / (func.maxs[0] - func.mins[0])
@@ -68,8 +68,8 @@ class Population:
         func = self._funcs[func_name](dimension_count)
         
         #create our populations
-        self.pop = self._generate_pop(self.size, dimension_count, func)
-        self.oldpop = self._generate_pop(self.size, dimension_count, func)
+        self.pop = self._generate_pop(self.size, func)
+        self.oldpop = self._generate_pop(self.size, func)
 
         #scale our gamma 
         self.gamma = self.gamma0 / (func.maxs[0] - func.mins[0])
@@ -85,16 +85,14 @@ class Population:
         self.pop.sort()
         return self.pop[0]
 
-    def _generate_pop(self, size, dim, func):
+    def _generate_pop(self, size, func):
         """ initializes our population """
-         
+        
+        dim = len(func.maxs)
         params = [(func.mins[i], func.maxs[i] - func.mins[i]) for i in xrange(dim)]
         seeds = np.array(lhs([uniform]*dim, params, size, False, np.identity(dim))).T
 
         flies = [FireFly(func, self, dim, seeds[i]) for i in xrange(size)]
-
-        for fly in flies:
-            fly.eval()
 
         return flies
 
@@ -215,7 +213,7 @@ class FireFly:
         self.pop = population
         self.coords = seeds
         self.moved = False
-        self.val = 0.0
+        self.val = self.func.eval(self.coords)
 
     def __cmp__(self, fly):
         if isinstance(fly, FireFly):
@@ -254,6 +252,9 @@ class FireFly:
         
         self.moved = False
         reduce(flyfold, self.pop.oldpop, self)
+
+        #if we didn't move, we are a local best
+        #in that case, move a little bit randomly
         if not self.moved:
             self.move_random()
         self.eval()
