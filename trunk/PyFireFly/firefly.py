@@ -25,7 +25,8 @@ class Population:
     EPSILON = 1e-5
 
     _funcs = { "dejung" : DeJung ,
-            "ackley" : Ackley}
+            "ackley" : Ackley,
+            "rastrigin" : Rastrigin}
 
     def __init__(self, gen, size, alpha, beta, gamma):
 
@@ -241,7 +242,10 @@ class FireFly:
     def map(self):
         """ nmap maps a firefly to its new position """
 
+        #compare ourself to other flies and update
         reduce(flyfold, self.pop.oldpop, self)
+        
+        #reevaluate ourselves in function space
         self.eval()
         
         return self
@@ -250,13 +254,18 @@ class FireFly:
         """ hybrid_map maps a firefly to its new 
             position using the hybrid technique """
         
+        #reset moved to False
         self.moved = False
+        
+        #compare ourself to other flies and update
         reduce(flyfold, self.pop.oldpop, self)
 
         #if we didn't move, we are a local best
         #in that case, move a little bit randomly
         if not self.moved:
             self.move_random()
+
+        #reevaluate ourselves in function space
         self.eval()
 
         return self
