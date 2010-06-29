@@ -22,9 +22,9 @@ class Population:
 
     NORMAL = 1
     HYBRID = 2
-    EPSILON = 0.00001
+    EPSILON = 1e-5
 
-    __funcs = { "dejung" : DeJung ,
+    _funcs = { "dejung" : DeJung ,
             "ackley" : Ackley}
 
     def __init__(self, gen, size, alpha, beta, gamma):
@@ -43,19 +43,19 @@ class Population:
             on the initialization parameters given """
 
         #get the actual function
-        func = self.__funcs[func_name](dimension_count)
+        func = self._funcs[func_name](dimension_count)
         
         #create our populations
-        self.pop = self.__generate_pop(self.size, dimension_count, func)
-        self.oldpop = self.__generate_pop(self.size, dimension_count, func)
+        self.pop = self._generate_pop(self.size, dimension_count, func)
+        self.oldpop = self._generate_pop(self.size, dimension_count, func)
         
         #scale our gamma 
         self.gamma = self.gamma0 / (func.maxs[0] - func.mins[0])
 
         if style == Population.NORMAL:
-            self.__npop()
+            self._npop()
         else:
-            self.__hpop()
+            self._hpop()
 
         self.pop.sort()
         return self.pop[0]
@@ -65,53 +65,50 @@ class Population:
             the values is less than EPSILON """
 
         #get the actual function
-        func = self.__funcs[func_name](dimension_count)
+        func = self._funcs[func_name](dimension_count)
         
         #create our populations
-        self.pop = self.__generate_pop(self.size, dimension_count, func)
-        self.oldpop = self.__generate_pop(self.size, dimension_count, func)
+        self.pop = self._generate_pop(self.size, dimension_count, func)
+        self.oldpop = self._generate_pop(self.size, dimension_count, func)
 
         #scale our gamma 
         self.gamma = self.gamma0 / (func.maxs[0] - func.mins[0])
 
         if style == Population.NORMAL:
-            count = self.__test_population()
+            count = self._test_population()
             line = "test did " + str(count) + " evaluations"
         else:
-            count = self.__hybrid_test_population()
+            count = self._hybrid_test_population()
             line = "hybrid test did " + str(count) + " evaluations"
 
         print line
         self.pop.sort()
         return self.pop[0]
 
-    def __generate_pop(self, size, dim, func):
+    def _generate_pop(self, size, dim, func):
         """ initializes our population """
          
-        # if dimensions are higher than 5, use the 
-        # Latin hyper cube to sample, otherwise use 
-        # multivariate uniform
-        if dim > 5:
-            params = [(func.mins[i], func.maxs[i] - func.mins[i]) for i in xrange(dim)]
-            seeds = np.array(lhs([uniform]*dim, params, size, False, np.identity(dim))).T
-        else:
-            loc = func.mins[0]
-            scale = func.maxs[0] - func.mins
-            seeds = [uniform.rvs(loc, scale, dim) for seed in xrange(size)]
+        params = [(func.mins[i], func.maxs[i] - func.mins[i]) for i in xrange(dim)]
+        seeds = np.array(lhs([uniform]*dim, params, size, False, np.identity(dim))).T
 
-        return [FireFly(func, self, dim, seeds[i])  for i in xrange(size)]
+        flies = [FireFly(func, self, dim, seeds[i]) for i in xrange(size)]
 
-    def __npop(self):
-        """ __npop runs the normal firefly algorithm """
+        for fly in flies:
+            fly.eval()
+
+        return flies
+
+    def _npop(self):
+        """ _npop runs the normal firefly algorithm """
 
         pool = Pool()
         for _ in xrange(self.gen):
             #copy our population over to old one as well
-            self.__copy_pop()
+            self._copy_pop()
             #map our current population to a new one
-            self.pop = pool.map(map_fly, self.pop)
+            self.pop[:] = pool.map(map_fly, self.pop)
 
-    def __test_population(self):
+    def _test_population(self):
         """ runs the optimization until the mean values of change are 
             less than a given epsilon. Returns the amount of function
             evaluations """
@@ -120,52 +117,29 @@ class Population:
 
         while True:
             #copy our population over to old one as well
-            self.__copy_pop()
-            #map our current population to a new one
-            self.pop = map(map_fly, self.pop)
+            self._copy_pop()
             
-            dm = self.__delta_of_means()
-            print dm
+            #map our current population to a new one
+            self.pop[:] = pool.map(map_fly, self.pop)
 
             #calculate the delta of the means
-            if dm < Population.EPSILON:
+            if self._delta_of_means() < Population.EPSILON:
                 break
             
             i += 1
 
         return i * len(self.pop) 
 
-    def __hybrid_test_population(self):
-        """ runs the optimization until the mean values of change are
-            less than a given epsilon. Returns the amoung of function
-            evaluations """
+    def _hpop(self):
+        """ _hpop runs the hybrid firefly algorithm """
 
         pool = Pool()
-        i = 2.0
 
-        while True:
-            #calculate our new alpha value based on the annealing schedule
-            #this may change to allow for a user chosen schedule
-            self.alpha = self.alpha0 / math.log(i)
-            
-            #copy our population over to old one as well
-            self.__copy_pop()
-            #map our current population to a new one
-            self.pop = map(hybrid_map_fly, self.pop)
-            dm = self.__delta_of_means()
-            print dm
-            #calculate the delta of the means
-            if dm < Population.EPSILON:
-                break
-            
-            i += 1
+        def set_pop(fly):
+            """weird hack to get the pickled population alpha to be set"""
+            fly.pop = self
+            return fly
 
-        return int(i - 2) * len(self.pop)
-
-    def __hpop(self):
-        """ __hpop runs the hybrid firefly algorithm """
-
-        pool = Pool()
         #start at 2 for the log function. do same amount of steps
         for i in xrange(2, self.gen + 2):
             #calculate our new alpha value based on the annealing schedule
@@ -173,21 +147,60 @@ class Population:
             self.alpha = self.alpha0 / math.log(i)
             
             #copy our population over to old one as well
-            self.__copy_pop()
+            self._copy_pop()
+            
+            #annoying hack to get around the cached pickle of pop
+            self.pop[:] = [set_pop(fly) for fly in self.pop]
+
             #map our current population to a new one
-            self.pop = pool.map(hybrid_map_fly, self.pop)
+            self.pop[:] = pool.map(hybrid_map_fly, self.pop)
 
-    def __copy_pop(self):
+    def _hybrid_test_population(self):
+        """ runs the optimization until the mean values of change are
+            less than a given epsilon. Returns the amoung of function
+            evaluations """
+
+        pool = Pool()
+        i = 2.0
+
+        def set_pop(fly):
+            """weird hack to get the pickled population alpha to be set"""
+            fly.pop = self
+            return fly
+
+        while True:
+            #calculate our new alpha value based on the annealing schedule
+            #this may change to allow for a user chosen schedule
+            self.alpha = self.alpha0 / math.log(i)
+            
+            #copy our population over to old one as well
+            self._copy_pop()
+
+            #annoying hack to get around the cached pickle of pop
+            self.pop[:] = [set_pop(fly) for fly in self.pop]
+
+            #map our current population to a new one
+            self.pop[:] = pool.map(hybrid_map_fly, self.pop)
+            
+            #calculate the delta of the means
+            if self._delta_of_means() < Population.EPSILON:
+                break
+            
+            i += 1
+
+        return int(i - 2) * len(self.pop)
+
+    def _copy_pop(self):
         """ copies the population coords to oldpopulation coords """
-        for i in xrange(len(self.pop)):
-            self.oldpop[i].copy(self.pop[i])
+        for fly, oldfly in zip(self.pop, self.oldpop):
+            oldfly.copy(fly)
 
-    def __delta_of_means(self):
+    def _delta_of_means(self):
         """ calculates the delta of the mean values """
         average = oldaverage = 0.0
-        for i in xrange(len(self.pop)):
-            average += self.pop[i].val
-            oldaverage += self.oldpop[i].val
+        for fly, oldfly in zip(self.pop, self.oldpop):
+            average += fly.val
+            oldaverage += oldfly.val
 
         average = average / len(self.pop)
         oldaverage = oldaverage / len(self.pop)
@@ -200,9 +213,9 @@ class FireFly:
     def __init__(self, objfunc, population, dim, seeds):
         self.func = objfunc
         self.pop = population
-        self.coords = np.array(seeds) #self.__init_coords(seeds, self.func.maxs, self.func.mins, dim)
-        self.val = self.func.eval(self.coords)
+        self.coords = seeds
         self.moved = False
+        self.val = 0.0
 
     def __cmp__(self, fly):
         if isinstance(fly, FireFly):
@@ -211,10 +224,10 @@ class FireFly:
             return cmp(self.val, fly)
 
     def __str__(self):
-        return str(self.val)
+        return " f(" + str(self.coords) + ") = " + str(self.val)
 
     def __repr__(self):
-        return str(self.val)
+        return " f(" + str(self.coords) + ") = " + str(self.val)
 
     def eval(self):
         """ eval evaluates the firefly given its current coordinates """
@@ -225,43 +238,54 @@ class FireFly:
         """ copy the coordinates and val from fly to this """
 
         self.val = fly.val
-        for i in xrange(len(fly.coords)):
-            self.coords[i] = fly.coords[i]
+        self.coords[:] = fly.coords
 
     def map(self):
         """ nmap maps a firefly to its new position """
+
         reduce(flyfold, self.pop.oldpop, self)
         self.eval()
+        
+        return self
 
     def hybrid_map(self):
         """ hybrid_map maps a firefly to its new 
             position using the hybrid technique """
-
+        
         self.moved = False
         reduce(flyfold, self.pop.oldpop, self)
         if not self.moved:
             self.move_random()
         self.eval()
 
+        return self
+
     def nfoldf(self, fly):
         """ our fold function to use over a list of flies """
 
         if self.val > fly.val:
             #calculate the distance
-            dist = self.__calculate_dist(fly)
+            dist = self._calculate_dist(fly)
             #calculate the attractiveness beta
-            beta = self.__calculate_beta(dist, self.pop.beta0, self.pop.gamma)
+            beta = self._calculate_beta(dist, self.pop.beta0, self.pop.gamma)
             #move towards fly
             self.move(self.pop.alpha, beta, fly)
+
+        return self
 
     def move(self, alpha, beta, fly):
         """ moves towards another fly based on the 
             values of alpha and beta """
 
-        for i in xrange(len(self.coords)):
+        #it would be nice to do another map here
+        #but it is kind of hard to do with each coord
+        #having its own min/max. I dont like
+        #the idea of zipping the list with min/max
+        #_then_ mapping
+        for i, coord in enumerate(self.coords):
             # calc the temp value to set as coord
             tval = ((1 - beta) * fly.coords[i]) + \
-                    (beta * self.coords[i]) + (alpha * (uniform.rvs() - 0.5))
+                    (beta * coord) + (alpha * (uniform.rvs() - 0.5))
             # set as coord if within bounds
             self.coords[i] = self.func.mins[i] if tval < self.func.mins[i] \
                     else self.func.maxs[i] if tval > self.func.maxs[i] else tval
@@ -272,38 +296,35 @@ class FireFly:
         """ moves a little random bit"""
         alpha = self.pop.alpha
 
-        for i in xrange(len(self.coords)):
+        for i, coord in enumerate(self.coords):
             # calc the temp value to set as coord
-            tval = self.coords[i] + (alpha * (uniform.rvs() - 0.5))
+            tval = coord + (alpha * (uniform.rvs() - 0.5))
             # set as coord if within bounds
             self.coords[i] = self.func.mins[i] if tval < self.func.mins[i] \
                     else self.func.maxs[i] if tval > self.func.maxs[i] else tval
 
-    def __calculate_dist(self, fly):
+    def _calculate_dist(self, fly):
         """ calculates the euclidean distance between flies """
         totalsum = 0.0
-        for i in xrange(len(self.coords)):
-            totalsum += (self.coords[i] - fly.coords[i])**2
+        for coord, flycoord in zip(self.coords, fly.coords):
+            totalsum += (coord - flycoord)**2
 
         return math.sqrt(totalsum)
 
-    def __calculate_beta(self, dist, beta0, gamma):
+    def _calculate_beta(self, dist, beta0, gamma):
         """ calculates the value of beta, or attraction """
         return beta0 * math.exp((-gamma) * (dist**2))
 
 #These functions just help with the higher order functions
 def flyfold(fly, otherfly):
     """ this is the function used for folding over a list of flies """
-    fly.nfoldf(otherfly)
-    return fly
+    return fly.nfoldf(otherfly)
 
 def map_fly(fly):
     """ this is a weird workaround to be able to use the pool """
-    fly.map()
-    return fly
+    return fly.map()
 
 def hybrid_map_fly(fly):
     """ this is a weird workaround to be able to use the pool """
-    fly.hybrid_map()
-    return fly
+    return fly.hybrid_map()
 
