@@ -18,7 +18,7 @@ def Rastrigin(dim):
 
 def _dejung(coords):
     """ the sphere (dejung) function """
-    return sum([x**2 for x in coords])
+    return sum([x**2.0 for x in coords])
 
 def _ackley(coords):
     """ the ackley function """
@@ -29,7 +29,7 @@ def _ackley(coords):
     s1 = s2 = 0.0
 
     for i in coords:
-        s1 += i**2
+        s1 += i**2.0
         s2 += math.cos(c*i)
 
     return -a * math.exp(-b * math.sqrt((1.0/n) * s1)) - \
@@ -37,7 +37,7 @@ def _ackley(coords):
 
 def _rastrigin(coords):
     """ rastrigin function """
-    return 20 + sum([x**2 - 10.0*math.cos(2.0 * math.pi * x) for x in coords])
+    return 20 + sum([x**2.0 - 10.0*math.cos(2.0 * math.pi * x) for x in coords])
 
 class ObjFunc:
     """ This is our objective function.
