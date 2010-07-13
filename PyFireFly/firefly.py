@@ -1,5 +1,5 @@
-""" This module contains the Population class and Firefly class for
-    continuous optimization problems"""
+''' This module contains the Population class and Firefly class for
+    continuous optimization problems'''
 import math
 import numpy as np
 from BIP.Bayes.lhs import lhs
@@ -8,30 +8,35 @@ from multiprocessing import Pool
 from functions import *
 
 def write_coords(filename, pop):
-    """ This function will output the points for each fly in the population """
+    ''' This function will output the points for each fly in the population 
+    '''
 
     with open(filename, 'w') as outputfile:
         for fly in pop.pop:
             for coord in fly.coords:
-                outputfile.write(str(coord) + " ")
-            outputfile.write("\n")
+                outputfile.write(str(coord) + ' ')
+            outputfile.write('\n')
 
 class Population:
-    """ The Population class is responsible for maintaining the fireflies and
-        running the rounds of optimization"""
+    ''' The Population class is responsible for maintaining the fireflies and
+        running the rounds of optimization
+    '''
 
     NORMAL = 1
     HYBRID = 2
     EPSILON = 1e-5
 
-    _funcs = { "dejung" : DeJung ,
-            "ackley" : Ackley,
-            "rastrigin" : Rastrigin}
+    _funcs = { 'dejung' : DeJung ,
+            'ackley' : Ackley,
+            'michalewicz' : Michalewicz,
+            'rosenbrock' : Rosenbrock,
+            'rastrigin' : Rastrigin}
 
     def __init__(self, gen, size, alpha, beta, gamma):
+        ''' Setup sets the initialization parameters 
+            for the population
+        '''
 
-        """ Setup sets the initialization parameters 
-            for the population"""
         self.gen = gen
         self.size = size
         self.alpha = self.alpha0 = alpha
@@ -40,8 +45,9 @@ class Population:
         self.pop = self.oldpop = None
 
     def run(self, func_name, dimension_count, style=NORMAL):
-        """ Run begins the optimization based 
-            on the initialization parameters given """
+        ''' Run begins the optimization based 
+            on the initialization parameters given 
+        '''
 
         #get the actual function
         func = self._funcs[func_name](dimension_count)
@@ -62,8 +68,9 @@ class Population:
         return self.pop[0]
 
     def test(self, func_name, dimension_count, style=NORMAL):
-        """ Runs the Firefly algorithm until the mean delta of
-            the values is less than EPSILON """
+        ''' Runs the Firefly algorithm until the mean delta of
+            the values is less than EPSILON 
+        '''
 
         #get the actual function
         func = self._funcs[func_name](dimension_count)
@@ -77,17 +84,18 @@ class Population:
 
         if style == Population.NORMAL:
             count = self._test_population()
-            line = "test did " + str(count) + " evaluations"
+            line = 'test did ' + str(count) + ' evaluations'
         else:
             count = self._hybrid_test_population()
-            line = "hybrid test did " + str(count) + " evaluations"
+            line = 'hybrid test did ' + str(count) + ' evaluations'
 
         print line
         self.pop.sort()
         return self.pop[0]
 
     def _generate_pop(self, size, func):
-        """ initializes our population """
+        ''' initializes our population 
+        '''
         
         dim = len(func.maxs)
         params = [(func.mins[i], func.maxs[i] - func.mins[i]) for i in xrange(dim)]
@@ -98,7 +106,8 @@ class Population:
         return flies
 
     def _npop(self):
-        """ _npop runs the normal firefly algorithm """
+        ''' _npop runs the normal firefly algorithm 
+        '''
 
         pool = Pool()
         for _ in xrange(self.gen):
@@ -108,9 +117,11 @@ class Population:
             self.pop[:] = pool.map(map_fly, self.pop)
 
     def _test_population(self):
-        """ runs the optimization until the mean values of change are 
+        ''' runs the optimization until the mean values of change are 
             less than a given epsilon. Returns the amount of function
-            evaluations """
+            evaluations 
+        '''
+        
         i = 0
         pool = Pool()
 
@@ -130,12 +141,15 @@ class Population:
         return i * len(self.pop) 
 
     def _hpop(self):
-        """ _hpop runs the hybrid firefly algorithm """
+        ''' _hpop runs the hybrid firefly algorithm 
+        '''
 
         pool = Pool()
 
         def set_pop(fly):
-            """weird hack to get the pickled population alpha to be set"""
+            '''weird hack to get the pickled population alpha to be set
+            '''
+
             fly.pop = self
             return fly
 
@@ -155,15 +169,18 @@ class Population:
             self.pop[:] = pool.map(hybrid_map_fly, self.pop)
 
     def _hybrid_test_population(self):
-        """ runs the optimization until the mean values of change are
+        ''' runs the optimization until the mean values of change are
             less than a given epsilon. Returns the amoung of function
-            evaluations """
+            evaluations 
+        '''
 
         pool = Pool()
         i = 2.0
 
         def set_pop(fly):
-            """weird hack to get the pickled population alpha to be set"""
+            '''weird hack to get the pickled population alpha to be set
+            '''
+            
             fly.pop = self
             return fly
 
@@ -190,12 +207,16 @@ class Population:
         return int(i - 2) * len(self.pop)
 
     def _copy_pop(self):
-        """ copies the population coords to oldpopulation coords """
+        ''' copies the population coords to oldpopulation coords 
+        '''
+
         for fly, oldfly in zip(self.pop, self.oldpop):
             oldfly.copy(fly)
 
     def _delta_of_means(self):
-        """ calculates the delta of the mean values """
+        ''' calculates the delta of the mean values 
+        '''
+
         average = oldaverage = 0.0
         for fly, oldfly in zip(self.pop, self.oldpop):
             average += fly.val
@@ -207,7 +228,10 @@ class Population:
         return math.fabs(average - oldaverage)
 
 class FireFly:
-    """ A FireFly is a point in hyperdimensional space """
+    ''' A FireFly is a point in hyperdimensional space 
+    '''
+
+    BETA_MIN = 0.05
 
     def __init__(self, objfunc, population, dim, seeds):
         self.func = objfunc
@@ -223,24 +247,27 @@ class FireFly:
             return cmp(self.val, fly)
 
     def __str__(self):
-        return " f(" + str(self.coords) + ") = " + str(self.val)
+        return ' f(' + str(self.coords) + ') = ' + str(self.val)
 
     def __repr__(self):
-        return " f(" + str(self.coords) + ") = " + str(self.val)
+        return ' f(' + str(self.coords) + ') = ' + str(self.val)
 
     def eval(self):
-        """ eval evaluates the firefly given its current coordinates """
+        ''' eval evaluates the firefly given its current coordinates 
+        '''
 
         self.val = self.func.eval(self.coords)
 
     def copy(self, fly):
-        """ copy the coordinates and val from fly to this """
+        ''' copy the coordinates and val from fly to this 
+        '''
 
         self.val = fly.val
         self.coords[:] = fly.coords
 
     def map(self):
-        """ nmap maps a firefly to its new position """
+        ''' nmap maps a firefly to its new position 
+        '''
 
         #compare ourself to other flies and update
         reduce(flyfold, self.pop.oldpop, self)
@@ -251,8 +278,9 @@ class FireFly:
         return self
 
     def hybrid_map(self):
-        """ hybrid_map maps a firefly to its new 
-            position using the hybrid technique """
+        ''' hybrid_map maps a firefly to its new 
+            position using the hybrid technique 
+        '''
         
         #reset moved to False
         self.moved = False
@@ -271,7 +299,8 @@ class FireFly:
         return self
 
     def nfoldf(self, fly):
-        """ our fold function to use over a list of flies """
+        ''' our fold function to use over a list of flies 
+        '''
 
         if self.val > fly.val:
             #calculate the distance
@@ -284,8 +313,9 @@ class FireFly:
         return self
 
     def move(self, alpha, beta, fly):
-        """ moves towards another fly based on the 
-            values of alpha and beta """
+        ''' moves towards another fly based on the 
+            values of alpha and beta 
+        '''
 
         #it would be nice to do another map here
         #but it is kind of hard to do with each coord
@@ -303,7 +333,9 @@ class FireFly:
         self.moved = True
 
     def move_random(self):
-        """ moves a little random bit"""
+        ''' moves a little random bit
+        '''
+
         alpha = self.pop.alpha
 
         for i, coord in enumerate(self.coords):
@@ -314,27 +346,38 @@ class FireFly:
                     else self.func.maxs[i] if tval > self.func.maxs[i] else tval
 
     def _calculate_dist(self, fly):
-        """ calculates the euclidean distance between flies """
+        ''' calculates the euclidean distance between flies 
+        '''
+
         totalsum = 0.0
         for coord, flycoord in zip(self.coords, fly.coords):
-            totalsum += (coord - flycoord)**2
+            totalsum += (coord - flycoord)**2.0
 
         return math.sqrt(totalsum)
 
     def _calculate_beta(self, dist, beta0, gamma):
-        """ calculates the value of beta, or attraction """
-        return beta0 * math.exp((-gamma) * (dist**2))
+        ''' calculates the value of beta, or attraction 
+        '''
+        
+        beta = (beta0 * math.exp((-gamma) * (dist**2.0)))
+        return beta if beta > self.BETA_MIN else self.BETA_MIN
 
 #These functions just help with the higher order functions
 def flyfold(fly, otherfly):
-    """ this is the function used for folding over a list of flies """
+    ''' this is the function used for folding over a list of flies 
+    '''
+
     return fly.nfoldf(otherfly)
 
 def map_fly(fly):
-    """ this is a weird workaround to be able to use the pool """
+    ''' this is a weird workaround to be able to use the pool 
+    '''
+    
     return fly.map()
 
 def hybrid_map_fly(fly):
-    """ this is a weird workaround to be able to use the pool """
+    ''' this is a weird workaround to be able to use the pool 
+    '''
+
     return fly.hybrid_map()
 
