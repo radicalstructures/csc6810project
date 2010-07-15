@@ -1,7 +1,9 @@
 ''' This module contains the Population class and Firefly class for
     continuous optimization problems'''
 import math
+import time
 import numpy as np
+from pylab import *
 from BIP.Bayes.lhs import lhs
 from scipy.stats import uniform
 from multiprocessing import Pool
@@ -44,7 +46,7 @@ class Population:
         self.gamma = self.gamma0 = gamma
         self.pop = self.oldpop = None
 
-    def run(self, func_name, dimension_count, style=NORMAL):
+    def run(self, func_name, dimension_count, style=NORMAL, draw=False):
         ''' Run begins the optimization based 
             on the initialization parameters given 
         '''
@@ -59,15 +61,20 @@ class Population:
         #scale our gamma 
         self.gamma = self.gamma0 / (func.maxs[0] - func.mins[0])
 
+        #setup drawing if necessary
+        if draw:
+            ion()
+            coords, = plot([fly.coords[0] for fly in self.pop], [fly.coords[1] for fly in self.pop], 'o')
+
         if style == Population.NORMAL:
-            self._npop()
+            self._npop(coords)
         else:
-            self._hpop()
+            self._hpop(coords)
 
         self.pop.sort()
         return self.pop[0]
 
-    def test(self, func_name, dimension_count, style=NORMAL):
+    def test(self, func_name, dimension_count, style=NORMAL, draw=False):
         ''' Runs the Firefly algorithm until the mean delta of
             the values is less than EPSILON 
         '''
@@ -82,11 +89,16 @@ class Population:
         #scale our gamma 
         self.gamma = self.gamma0 / (func.maxs[0] - func.mins[0])
 
+        #setup drawing if necessary
+        if draw:
+            ion()
+            coords, = plot([fly.coords[0] for fly in self.pop], [fly.coords[1] for fly in self.pop], 'o')
+
         if style == Population.NORMAL:
-            count = self._test_population()
+            count = self._test_population(coords)
             line = 'test did ' + str(count) + ' evaluations'
         else:
-            count = self._hybrid_test_population()
+            count = self._hybrid_test_population(coords)
             line = 'hybrid test did ' + str(count) + ' evaluations'
 
         print line
@@ -105,27 +117,42 @@ class Population:
 
         return flies
 
-    def _npop(self):
+    def _npop(self, coords):
         ''' _npop runs the normal firefly algorithm 
         '''
 
+        #initialize our process pool
         pool = Pool()
         for _ in xrange(self.gen):
+            #draw if we are supposed to be visualization
+            if coords is not None:
+                coords.set_xdata([fly.coords[0] for fly in self.pop])
+                coords.set_ydata([fly.coords[1] for fly in self.pop])
+                draw()
+
             #copy our population over to old one as well
             self._copy_pop()
             #map our current population to a new one
             self.pop[:] = pool.map(map_fly, self.pop)
 
-    def _test_population(self):
+
+    def _test_population(self, coords):
         ''' runs the optimization until the mean values of change are 
             less than a given epsilon. Returns the amount of function
             evaluations 
         '''
-        
+
+        #initialize our process pool
         i = 0
         pool = Pool()
 
         while True:
+            #draw if we are supposed to be visualization
+            if coords is not None:
+                coords.set_xdata([fly.coords[0] for fly in self.pop])
+                coords.set_ydata([fly.coords[1] for fly in self.pop])
+                draw()
+
             #copy our population over to old one as well
             self._copy_pop()
             
@@ -140,10 +167,11 @@ class Population:
 
         return i * len(self.pop) 
 
-    def _hpop(self):
+    def _hpop(self, coords):
         ''' _hpop runs the hybrid firefly algorithm 
         '''
 
+        #initialize our process pool
         pool = Pool()
 
         def set_pop(fly):
@@ -155,6 +183,12 @@ class Population:
 
         #start at 2 for the log function. do same amount of steps
         for i in xrange(2, self.gen + 2):
+            #draw if we are supposed to be visualization
+            if coords is not None:
+                coords.set_xdata([fly.coords[0] for fly in self.pop])
+                coords.set_ydata([fly.coords[1] for fly in self.pop])
+                draw()
+            
             #calculate our new alpha value based on the annealing schedule
             #this may change to allow for a user chosen schedule
             self.alpha = self.alpha0 / math.log(i)
@@ -168,12 +202,13 @@ class Population:
             #map our current population to a new one
             self.pop[:] = pool.map(hybrid_map_fly, self.pop)
 
-    def _hybrid_test_population(self):
+    def _hybrid_test_population(self, coords):
         ''' runs the optimization until the mean values of change are
             less than a given epsilon. Returns the amoung of function
             evaluations 
         '''
 
+        #initialize our process pool
         pool = Pool()
         i = 2.0
 
@@ -185,6 +220,12 @@ class Population:
             return fly
 
         while True:
+            #draw if we are supposed to be visualization
+            if coords is not None:
+                coords.set_xdata([fly.coords[0] for fly in self.pop])
+                coords.set_ydata([fly.coords[1] for fly in self.pop])
+                draw()
+
             #calculate our new alpha value based on the annealing schedule
             #this may change to allow for a user chosen schedule
             self.alpha = self.alpha0 / math.log(i)
@@ -324,7 +365,7 @@ class FireFly:
         #_then_ mapping
         for i, coord in enumerate(self.coords):
             # calc the temp value to set as coord
-            tval = ((1 - beta) * fly.coords[i]) + \
+            tval = ((1.0 - beta) * fly.coords[i]) + \
                     (beta * coord) + (alpha * (uniform.rvs() - 0.5))
             # set as coord if within bounds
             self.coords[i] = self.func.mins[i] if tval < self.func.mins[i] \
