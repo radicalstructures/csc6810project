@@ -39,8 +39,8 @@ def Rosenbrock(dim):
     return ObjFunc(_rosenbrock, [-5.0]*dim, [10.]*dim)
 
 def _dejung(coords):
-    """ the sphere (dejung) function """
-    return sum([x**2.0 for x in coords])
+    ''' the sphere (dejung) function 
+    '''
 
     return sum([x**2.0 for x in coords])
 
@@ -62,8 +62,8 @@ def _ackley(coords):
             math.exp((1.0/n) * s2) + a + math.exp(1)
 
 def _rastrigin(coords):
-    """ rastrigin function """
-    return 20 + sum([x**2.0 - 10.0*math.cos(2.0 * math.pi * x) for x in coords])
+    ''' rastrigin function 
+    '''
 
     return 20 + sum([x**2.0 - 10.0*math.cos(2.0 * math.pi * x) for x in coords])
 
