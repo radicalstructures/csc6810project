@@ -1,6 +1,6 @@
 ''' This module contains the Population class and Firefly class for
     continuous optimization problems'''
-import math
+import math as m
 import numpy as np
 from pylab import *
 from BIP.Bayes.lhs import lhs
@@ -45,6 +45,12 @@ class Population:
         self.gamma = self.gamma0 = gamma
         self.pop = self.oldpop = None
 
+    def __repr__(self):
+        return str(self.pop)
+
+    def __str__(self):
+        return str(self.pop)
+
     def run(self, func_name, dimension_count, style=NORMAL, draw=False):
         ''' Run begins the optimization based 
             on the initialization parameters given 
@@ -64,6 +70,8 @@ class Population:
         if draw:
             ion()
             coords, = plot([fly.coords[0] for fly in self.pop], [fly.coords[1] for fly in self.pop], 'o')
+        else:
+            coords = None
 
         if style == Population.NORMAL:
             self._npop(coords)
@@ -92,6 +100,8 @@ class Population:
         if draw:
             ion()
             coords, = plot([fly.coords[0] for fly in self.pop], [fly.coords[1] for fly in self.pop], 'o')
+        else:
+            coords = None
 
         if style == Population.NORMAL:
             count = self._test_population(coords)
@@ -133,6 +143,7 @@ class Population:
             self._copy_pop()
             #map our current population to a new one
             self.pop[:] = pool.map(map_fly, self.pop)
+            self.pop.sort()
 
 
     def _test_population(self, coords):
@@ -162,6 +173,7 @@ class Population:
             if self._delta_of_means() < Population.EPSILON:
                 break
             
+            self.pop.sort()
             i += 1
 
         return i * len(self.pop) 
@@ -190,7 +202,7 @@ class Population:
             
             #calculate our new alpha value based on the annealing schedule
             #this may change to allow for a user chosen schedule
-            self.alpha = self.alpha0 / math.log(i)
+            self.alpha = self.alpha0 / m.log(i)
             
             #copy our population over to old one as well
             self._copy_pop()
@@ -200,6 +212,7 @@ class Population:
 
             #map our current population to a new one
             self.pop[:] = pool.map(hybrid_map_fly, self.pop)
+            self.pop.sort()
 
     def _hybrid_test_population(self, coords):
         ''' runs the optimization until the mean values of change are
@@ -227,7 +240,7 @@ class Population:
 
             #calculate our new alpha value based on the annealing schedule
             #this may change to allow for a user chosen schedule
-            self.alpha = self.alpha0 / math.log(i)
+            self.alpha = self.alpha0 / float(log(i))
             
             #copy our population over to old one as well
             self._copy_pop()
@@ -242,6 +255,7 @@ class Population:
             if self._delta_of_means() < Population.EPSILON:
                 break
             
+            self.pop.sort()
             i += 1
 
         return int(i - 2) * len(self.pop)
@@ -265,7 +279,7 @@ class Population:
         average = average / len(self.pop)
         oldaverage = oldaverage / len(self.pop)
 
-        return math.fabs(average - oldaverage)
+        return m.fabs(average - oldaverage)
 
 class FireFly:
     ''' A FireFly is a point in hyperdimensional space 
@@ -364,8 +378,8 @@ class FireFly:
         #_then_ mapping
         for i, coord in enumerate(self.coords):
             # calc the temp value to set as coord
-            tval = ((1.0 - beta) * fly.coords[i]) + \
-                    (beta * coord) + (alpha * (uniform.rvs() - 0.5))
+            tval = coord + (beta * (fly.coords[i] - coord)) + \
+                        (alpha * (uniform.rvs() - 0.5))
             # set as coord if within bounds
             self.coords[i] = self.func.mins[i] if tval < self.func.mins[i] \
                     else self.func.maxs[i] if tval > self.func.maxs[i] else tval
@@ -393,13 +407,13 @@ class FireFly:
         for coord, flycoord in zip(self.coords, fly.coords):
             totalsum += (coord - flycoord)**2.0
 
-        return math.sqrt(totalsum)
+        return m.sqrt(totalsum)
 
     def calculate_beta(self, dist, beta0, gamma):
         ''' calculates the value of beta, or attraction 
         '''
         
-        beta = (beta0 * math.exp((-gamma) * (dist**2.0)))
+        beta = (beta0 * m.exp((-gamma) * (dist**2.0)))
         return beta if beta > self.BETA_MIN else self.BETA_MIN
 
 #These functions just help with the higher order functions
