@@ -1,7 +1,6 @@
 ''' This module contains the Population class and Firefly class for
     continuous optimization problems'''
 import math
-import time
 import numpy as np
 from pylab import *
 from BIP.Bayes.lhs import lhs
@@ -345,9 +344,9 @@ class FireFly:
 
         if self.val > fly.val:
             #calculate the distance
-            dist = self._calculate_dist(fly)
+            dist = self.calculate_dist(fly)
             #calculate the attractiveness beta
-            beta = self._calculate_beta(dist, self.pop.beta0, self.pop.gamma)
+            beta = self.calculate_beta(dist, self.pop.beta0, self.pop.gamma)
             #move towards fly
             self.move(self.pop.alpha, beta, fly)
 
@@ -386,7 +385,7 @@ class FireFly:
             self.coords[i] = self.func.mins[i] if tval < self.func.mins[i] \
                     else self.func.maxs[i] if tval > self.func.maxs[i] else tval
 
-    def _calculate_dist(self, fly):
+    def calculate_dist(self, fly):
         ''' calculates the euclidean distance between flies 
         '''
 
@@ -396,7 +395,7 @@ class FireFly:
 
         return math.sqrt(totalsum)
 
-    def _calculate_beta(self, dist, beta0, gamma):
+    def calculate_beta(self, dist, beta0, gamma):
         ''' calculates the value of beta, or attraction 
         '''
         
