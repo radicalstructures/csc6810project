@@ -123,7 +123,7 @@ ffa(const size_t nfireflies, const size_t niteration, const size_t nparams, cons
         memcpy_fflies(fflies_old, fflies);
 
         //rank our flies
-        qsort(fflies->flies, nfireflies, sizeof(ffly), &cmp_flies);
+        //qsort(fflies->flies, nfireflies, sizeof(ffly), &cmp_flies);
         
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
@@ -152,7 +152,7 @@ test_ffa(const size_t nfireflies, const size_t nparams, const double mins[], con
     //initialize our old firefly array
     fflies_old = init_fflies(nfireflies, nparams, mins, maxs, f);
 
-    //output_points(fflies, "start_ffa.dat");
+    output_points(fflies, "start_ffa.dat");
     do
     {        
         //keep another copy for move function
@@ -169,7 +169,7 @@ test_ffa(const size_t nfireflies, const size_t nparams, const double mins[], con
     qsort(fflies->flies, nfireflies, sizeof(ffly), &cmp_flies);
     *out = fflies->flies[0].val;
 
-    //output_points(fflies, "end_ffa.dat");
+    output_points(fflies, "end_ffa.dat");
 
     destroy_fflies(fflies);
     destroy_fflies(fflies_old);
@@ -196,7 +196,7 @@ ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, co
     //initialize our old firefly array
     fflies_old = init_fflies(nfireflies, nparams, mins, maxs, f);
 
-    //output_points(fflies, "start_ffasa.dat");
+    output_points(fflies, "start_ffasa.dat");
     for (i=0; i < niteration; i++)
     {
         //keep another copy for move function
@@ -211,7 +211,7 @@ ffasa(const size_t nfireflies, const size_t niteration, const size_t nparams, co
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
     }
-    //output_points(fflies, "end_ffasa.dat");
+    output_points(fflies, "end_ffasa.dat");
 
     destroy_fflies(fflies);
     destroy_fflies(fflies_old);
@@ -237,7 +237,7 @@ test_ffasa(const size_t nfireflies, const size_t nparams, const double mins[], c
     //initialize our old firefly array
     fflies_old = init_fflies(nfireflies, nparams, mins, maxs, f);
 
-    //output_points(fflies, "start_ffasa.dat");
+    output_points(fflies, "start_ffasa.dat");
     do
     {
         //keep another copy for move function
@@ -253,7 +253,7 @@ test_ffasa(const size_t nfireflies, const size_t nparams, const double mins[], c
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
         i++;
     } while (mean_delta(fflies, fflies_old) > EPSILON);
-    //output_points(fflies, "end_ffasa.dat");
+    output_points(fflies, "end_ffasa.dat");
     qsort(fflies->flies, nfireflies, sizeof(ffly), &cmp_flies);
     *out = fflies->flies[0].val;
 
@@ -322,7 +322,7 @@ move_fly(ffly *fly, ffly *old, const size_t nparams,
         //adjust position with a small random step
         for (i = 0; i < nparams; i++)
         {
-            double val = ((1 - beta) * fly->params[i]) + (beta * old->params[i]) + (alpha * (drand48() - 0.5));
+            double val = fly->params[i] + (beta * (old->params[i] - fly->params[i])) + (alpha * (drand48() - 0.5));
 
             //keep within bounds
             fly->params[i] = (val < mins[i]) ? mins[i] : (val > maxs[i]) ? maxs[i] : val;

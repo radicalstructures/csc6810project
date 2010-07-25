@@ -168,7 +168,7 @@ dejung(const ffly *fly, const size_t nparams)
 
     for (i = 0; i < nparams; i++)
     {
-        sum += fly->params[i] * fly->params[i];
+        sum += pow(fly->params[i], 2.0);
     }
     return sum;
 };
