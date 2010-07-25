@@ -29,7 +29,7 @@ main(int argc, char **argv)
     init_params(argc, argv, &pop_count, &max_gen, &dimension, &min, &max);
 
     //this should change to be some parameter soon...
-    obj_func func = &schwefel;
+    obj_func func = &dejung;
 
     mins = (double*)calloc(dimension, sizeof(double));
     maxs = (double*)calloc(dimension, sizeof(double));
@@ -44,11 +44,10 @@ main(int argc, char **argv)
     srand48(time(NULL));
     
     nffa = test_ffa(pop_count, dimension, mins, maxs, func, &out);
-    printf("%ld, %.5lf, ", nffa, out);
+    printf("FF Algo did %ld evaluations, min = %.5lf\n", nffa, out);
 
     nffasa = test_ffasa(pop_count, dimension, mins, maxs, func, &out);
-    //ffasa(pop_count, max_gen, dimension, mins, maxs, func);
-    printf("%ld, %.5lf\n", nffasa, out);
+    printf("Hybrid FF Algo did %ld evaluations, min = %.5lf\n", nffasa, out);
 
     free(mins);
     free(maxs);
