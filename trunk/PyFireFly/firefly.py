@@ -51,7 +51,7 @@ class Population:
     def __str__(self):
         return str(self.pop)
 
-    def run(self, func_name, dimension_count, style=NORMAL, draw=False):
+    def run(self, func_name, dimension_count, style=NORMAL, cpu_count=1, draw=False):
         ''' Run begins the optimization based 
             on the initialization parameters given 
         '''
@@ -74,14 +74,14 @@ class Population:
             coords = None
 
         if style == Population.NORMAL:
-            self._npop(coords)
+            self._npop(coords, cpu_count)
         else:
-            self._hpop(coords)
+            self._hpop(coords, cpu_count)
 
         self.pop.sort()
         return self.pop[0]
 
-    def test(self, func_name, dimension_count, style=NORMAL, draw=False):
+    def test(self, func_name, dimension_count, style=NORMAL, cpu_count=1, draw=False):
         ''' Runs the Firefly algorithm until the mean delta of
             the values is less than EPSILON 
         '''
@@ -104,10 +104,10 @@ class Population:
             coords = None
 
         if style == Population.NORMAL:
-            count = self._test_population(coords)
+            count = self._test_population(coords, cpu_count)
             line = 'test did ' + str(count) + ' evaluations'
         else:
-            count = self._hybrid_test_population(coords)
+            count = self._hybrid_test_population(coords, cpu_count)
             line = 'hybrid test did ' + str(count) + ' evaluations'
 
         print line
@@ -126,12 +126,12 @@ class Population:
 
         return flies
 
-    def _npop(self, coords):
+    def _npop(self, coords, cpu_count):
         ''' _npop runs the normal firefly algorithm 
         '''
 
         #initialize our process pool
-        pool = Pool()
+        pool = Pool(processes=cpu_count)
         for _ in xrange(self.gen):
             #draw if we are supposed to be visualization
             if coords is not None:
@@ -154,7 +154,7 @@ class Population:
 
         #initialize our process pool
         i = 0
-        pool = Pool()
+        pool = Pool(processes=cpu_count)
 
         while True:
             #draw if we are supposed to be visualization
@@ -178,12 +178,12 @@ class Population:
 
         return i * len(self.pop) 
 
-    def _hpop(self, coords):
+    def _hpop(self, coords, cpu_count):
         ''' _hpop runs the hybrid firefly algorithm 
         '''
 
         #initialize our process pool
-        pool = Pool()
+        pool = Pool(processes=cpu_count)
 
         def set_pop(fly):
             '''weird hack to get the pickled population alpha to be set
@@ -221,7 +221,7 @@ class Population:
         '''
 
         #initialize our process pool
-        pool = Pool()
+        pool = Pool(processes=cpu_count)
         i = 2.0
 
         def set_pop(fly):
