@@ -22,7 +22,7 @@ static int cmp_flies(const void *fly1,const void *fly2);
 
 static double calc_distance(const ffly *fly, const ffly *fly_old, size_t nparams);
 static double std_dev(const ffly_population *pop);
-static double mean_delta(const ffly_population *pop, const ffly_population *old);
+static double delta_mean(const ffly_population *pop, const ffly_population *old);
 
 /*
         This creates our firefly population and assigns random positions.
@@ -164,7 +164,7 @@ test_ffa(const size_t nfireflies, const size_t nparams, const double mins[], con
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
         i++;
-    }while (mean_delta(fflies, fflies_old) > EPSILON);
+    }while (delta_mean(fflies, fflies_old) > EPSILON);
     
     qsort(fflies->flies, nfireflies, sizeof(ffly), &cmp_flies);
     *out = fflies->flies[0].val;
@@ -252,7 +252,7 @@ test_ffasa(const size_t nfireflies, const size_t nparams, const double mins[], c
         //move the flies based on attractiveness
         move_fflies(fflies, fflies_old, f, alpha, gamma, mins, maxs);
         i++;
-    } while (mean_delta(fflies, fflies_old) > EPSILON);
+    } while (delta_mean(fflies, fflies_old) > EPSILON);
     //output_points(fflies, "end_ffasa.dat");
     qsort(fflies->flies, nfireflies, sizeof(ffly), &cmp_flies);
     *out = fflies->flies[0].val;
@@ -278,7 +278,6 @@ move_fflies(ffly_population *pop, const ffly_population *pop_old, obj_func f,
 
     for (i=0; i < nflies; i++)
     {   	    
-        #pragma omp parallel for private(j) shared(pop, pop_old, f, alpha, i, mins, maxs)
         for (j = 0; j < nflies; j++)
         {
             moved |= move_fly(&pop->flies[i], &pop_old->flies[j], nparams, alpha, gamma, mins, maxs);
@@ -318,6 +317,7 @@ move_fly(ffly *fly, ffly *old, const size_t nparams,
 
         //determine attractiveness with air density [gamma]
         double beta = beta0 * exp((-gamma) * pow(r, 2.0));
+				beta = (beta < BETA_MIN) ? BETA_MIN : beta;
 
         //adjust position with a small random step
         for (i = 0; i < nparams; i++)
@@ -417,16 +417,20 @@ std_dev(const ffly_population *pop)
     returns the mean of all the deltas for the objective func
 */
 static double
-mean_delta(const ffly_population *pop, const ffly_population *old)
+delta_mean(const ffly_population *pop, const ffly_population *old)
 {
-    double sumdelta = 0.0;
+    double sumnew = 0.0;
+    double sumold = 0.0;
     size_t i = 0;
 
     for (i = 0; i < pop->nfflies; i++)
     {
-        sumdelta += fabs(old->flies[i].val - pop->flies[i].val);
+        sumnew += pop->flies[i].val;
+        sumold += old->flies[i].val;
     }
 
-    return sumdelta / ((double)pop->nfflies);
+    sumnew = sumnew / ((double)pop->nfflies);
+    sumold = sumold / ((double)pop->nfflies);
+		return fabs(sumnew - sumold);
 };
 
