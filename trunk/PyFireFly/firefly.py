@@ -120,7 +120,7 @@ class Population:
         
         dim = len(func.maxs)
         params = [(func.mins[i], func.maxs[i] - func.mins[i]) for i in xrange(dim)]
-        seeds = np.array(lhs([uniform]*dim, params, size, False, np.identity(dim))).T
+        seeds = np.array(lhs([uniform]*dim, params, size, True, np.identity(dim))).T
 
         flies = [FireFly(func, self, dim, seeds[i]) for i in xrange(size)]
 
