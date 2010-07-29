@@ -2,11 +2,25 @@
 '''
 
 import math
+import pycuda.autoinit
+import pycuda.gpuarray as gp
+import pycuda.driver as drv
+import pycuda.reduction as rk
+import numpy as np
 
 def DeJung(dim):
     ''' returns the dejung objective function with 
         mins and maxs defined 
     '''
+
+    krnl = rk.ReductionKernel(np.float32, neutral='0',
+                reduce_expr='a + b', map_expr='a[i]*a[i]',
+                arguments='float *a')
+
+    def dejung(coords):
+        gpvals = gp.to_gpu(coords)
+        val = krnl(gpvals).get()
+        return val
 
     return ObjFunc(_dejung, [-5.14]*dim, [5.14]*dim)
 
@@ -59,7 +73,7 @@ def _ackley(coords):
         s2 += math.cos(c*i)
 
     return -a * math.exp(-b * math.sqrt((1.0/n) * s1)) - \
-            math.exp((1.0/n) * s2) + a + math.exp(1)
+            math.exp((1.0/n) * s2) + a + math.e
 
 def _rastrigin(coords):
     ''' rastrigin function 
