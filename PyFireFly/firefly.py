@@ -121,8 +121,9 @@ class Population:
         dim = len(func.maxs)
         params = [(func.mins[i], func.maxs[i] - func.mins[i]) for i in xrange(dim)]
         seeds = np.array(lhs([uniform]*dim, params, size, True, np.identity(dim))).T
+        seeds.astype(np.float32)
 
-        flies = [FireFly(func, self, dim, seeds[i]) for i in xrange(size)]
+        flies = [FireFly(func, self, dim, np.array(seeds[i])) for i in xrange(size)]
 
         return flies
 
@@ -142,11 +143,11 @@ class Population:
             #copy our population over to old one as well
             self._copy_pop()
             #map our current population to a new one
-            self.pop[:] = pool.map(map_fly, self.pop)
+            self.pop[:] = map(map_fly, self.pop)
             self.pop.sort()
 
 
-    def _test_population(self, coords):
+    def _test_population(self, coords, cpu_count):
         ''' runs the optimization until the mean values of change are 
             less than a given epsilon. Returns the amount of function
             evaluations 
@@ -211,10 +212,10 @@ class Population:
             self.pop[:] = [set_pop(fly) for fly in self.pop]
 
             #map our current population to a new one
-            self.pop[:] = pool.map(hybrid_map_fly, self.pop)
+            self.pop[:] = map(hybrid_map_fly, self.pop)
             self.pop.sort()
 
-    def _hybrid_test_population(self, coords):
+    def _hybrid_test_population(self, coords, cpu_count):
         ''' runs the optimization until the mean values of change are
             less than a given epsilon. Returns the amoung of function
             evaluations 
