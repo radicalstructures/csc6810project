@@ -143,7 +143,7 @@ class Population:
             #copy our population over to old one as well
             self._copy_pop()
             #map our current population to a new one
-            self.pop[:] = map(map_fly, self.pop)
+            self.pop[:] = pool.map(map_fly, self.pop)
             self.pop.sort()
 
 
@@ -153,25 +153,26 @@ class Population:
             evaluations 
         '''
 
-        #initialize our process pool
+        # initialize our process pool
         i = 0
         pool = Pool(processes=cpu_count)
 
         while True:
-            #draw if we are supposed to be visualization
+            # draw if we are supposed to be visualization
             if coords is not None:
                 coords.set_xdata([fly.coords[0] for fly in self.pop])
                 coords.set_ydata([fly.coords[1] for fly in self.pop])
                 draw()
 
-            #copy our population over to old one as well
+            # copy our population over to old one as well
             self._copy_pop()
             
-            #map our current population to a new one
+            # map our current population to a new one
             self.pop[:] = pool.map(map_fly, self.pop)
 
-            #calculate the delta of the means
-            if self._delta_of_means() < Population.EPSILON:
+            # calculate the delta of the means
+            #if self._delta_of_means() < Population.EPSILON:
+            if self._less_than_e(0.0, Population.EPSILON):
                 break
             
             self.pop.sort()
@@ -212,7 +213,7 @@ class Population:
             self.pop[:] = [set_pop(fly) for fly in self.pop]
 
             #map our current population to a new one
-            self.pop[:] = map(hybrid_map_fly, self.pop)
+            self.pop[:] = pool.map(hybrid_map_fly, self.pop)
             self.pop.sort()
 
     def _hybrid_test_population(self, coords, cpu_count):
@@ -239,21 +240,22 @@ class Population:
                 coords.set_ydata([fly.coords[1] for fly in self.pop])
                 draw()
 
-            #calculate our new alpha value based on the annealing schedule
-            #this may change to allow for a user chosen schedule
+            # calculate our new alpha value based on the annealing schedule
+            # this may change to allow for a user chosen schedule
             self.alpha = self.alpha0 / float(log(i))
             
-            #copy our population over to old one as well
+            # copy our population over to old one as well
             self._copy_pop()
 
-            #annoying hack to get around the cached pickle of pop
+            # annoying hack to get around the cached pickle of pop
             self.pop[:] = [set_pop(fly) for fly in self.pop]
 
-            #map our current population to a new one
+            # map our current population to a new one
             self.pop[:] = pool.map(hybrid_map_fly, self.pop)
             
-            #calculate the delta of the means
-            if self._delta_of_means() < Population.EPSILON:
+            # calculate the delta of the means
+            #if self._delta_of_means() < Population.EPSILON:
+            if self._less_than_e(0.0, Population.EPSILON):
                 break
             
             self.pop.sort()
@@ -267,6 +269,13 @@ class Population:
 
         for fly, oldfly in zip(self.pop, self.oldpop):
             oldfly.copy(fly)
+
+    def _less_than_e(self, optimum, epsilon):
+        ''' returns if the minimum fly is less than 
+            a given epsilon
+        '''
+
+        return fabs(min(self.pop).val - optimum) < epsilon
 
     def _delta_of_means(self):
         ''' calculates the delta of the mean values 
