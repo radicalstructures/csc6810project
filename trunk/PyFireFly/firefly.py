@@ -2,7 +2,7 @@
     continuous optimization problems'''
 import math as m
 import numpy as np
-from pylab import *
+from pylab import ion, draw, plot
 from BIP.Bayes.lhs import lhs
 from scipy.stats import uniform
 from multiprocessing import Pool
@@ -23,8 +23,10 @@ class Population:
         running the rounds of optimization
     '''
 
-    NORMAL = 1
-    HYBRID = 2
+    NONE = 1
+    BOLTZMANN = 2
+    CAUCHY = 3
+    FAST = 4
     EPSILON = 1e-5
 
     _funcs = { 'dejung' : DeJung ,
@@ -51,68 +53,52 @@ class Population:
     def __str__(self):
         return str(self.pop)
 
-    def run(self, func_name, dimension_count, style=NORMAL, cpu_count=1, draw=False):
+    def run(self, func_name, dimension_count, style=NONE, cpu_count=1, draw_graph=False):
         ''' Run begins the optimization based 
             on the initialization parameters given 
         '''
 
-        #get the actual function
-        func = self._funcs[func_name](dimension_count)
-        
-        #create our populations
-        self.pop = self._generate_pop(self.size, func)
-        self.oldpop = self._generate_pop(self.size, func)
-        
-        #scale our gamma 
-        self.gamma = self.gamma0 / (func.maxs[0] - func.mins[0])
+        # prepare before the run
+        coords, update = self._prepare_run(func_name, dimension_count, style, draw_graph)
 
-        #setup drawing if necessary
-        if draw:
-            ion()
-            coords, = plot([fly.coords[0] for fly in self.pop], [fly.coords[1] for fly in self.pop], 'o')
-        else:
-            coords = None
+        # run the algorithm
+        self._map_pop(coords, update, cpu_count)
 
-        if style == Population.NORMAL:
-            self._npop(coords, cpu_count)
-        else:
-            self._hpop(coords, cpu_count)
-
+        # sort the population and return best
         self.pop.sort()
         return self.pop[0]
 
-    def test(self, func_name, dimension_count, style=NORMAL, cpu_count=1, draw=False):
+    def test(self, func_name, dimension_count, style=NONE, cpu_count=1, draw_graph=False):
         ''' Runs the Firefly algorithm until the mean delta of
             the values is less than EPSILON 
         '''
 
-        #get the actual function
-        func = self._funcs[func_name](dimension_count)
-        
-        #create our populations
-        self.pop = self._generate_pop(self.size, func)
-        self.oldpop = self._generate_pop(self.size, func)
+        # prepare before the run
+        coords, update = self._prepare_run(func_name, dimension_count, style, draw_graph)
 
-        #scale our gamma 
-        self.gamma = self.gamma0 / (func.maxs[0] - func.mins[0])
+        # run the algorithm
+        i = self._test_map_pop(coords, update, cpu_count)
 
-        #setup drawing if necessary
-        if draw:
-            ion()
-            coords, = plot([fly.coords[0] for fly in self.pop], [fly.coords[1] for fly in self.pop], 'o')
-        else:
-            coords = None
+        print 'ran', i, 'iterations until stopped'
 
-        if style == Population.NORMAL:
-            count = self._test_population(coords, cpu_count)
-            line = 'test did ' + str(count) + ' evaluations'
-        else:
-            count = self._hybrid_test_population(coords, cpu_count)
-            line = 'hybrid test did ' + str(count) + ' evaluations'
-
-        print line
+        # sort the population and return the best
         self.pop.sort()
         return self.pop[0]
+
+    def delta_of_xstar(self, func_name, dimension_count):
+        ''' this will return |f(x*) - f(x_best)|
+        '''
+
+        # get the objective function
+        func = self._funcs[func_name](dimension_count)
+
+        # x* value
+        val = func.eval(func.xstar)
+
+        # get best fly's value
+        bestval = min(self.pop).val
+
+        return m.fabs(val - bestval)
 
     def _generate_pop(self, size, func):
         ''' initializes our population 
@@ -127,60 +113,58 @@ class Population:
 
         return flies
 
-    def _npop(self, coords, cpu_count):
-        ''' _npop runs the normal firefly algorithm 
+    def _get_schedule(self, style):
+        ''' this gets our annealing schedule based
+            on the style specified
         '''
 
-        #initialize our process pool
-        pool = Pool(processes=cpu_count)
-        for _ in xrange(self.gen):
-            #draw if we are supposed to be visualization
-            if coords is not None:
-                coords.set_xdata([fly.coords[0] for fly in self.pop])
-                coords.set_ydata([fly.coords[1] for fly in self.pop])
-                draw()
+        if style == Population.NONE:
+            update = lambda t: self.alpha0
+        elif style == Population.BOLTZMANN:
+            update = lambda t: self.alpha0 / m.log(float(t))
+        elif style == Population.CAUCHY:
+            update = lambda t: self.alpha0 / float(t)
+        elif style == Population.FAST:
+            # perhaps we should ask for values of quench, m, and n at some point...
+            # alpha = alpha0 * exp(-c * t**quench)
+            # c = m * exp(-n * quench)
+            c = 1.0 * m.exp(-1.0 * 1.0)
+            update = lambda t: self.alpha0 * m.exp(-c * t**(1.0))
+        else:
+            raise
 
-            #copy our population over to old one as well
-            self._copy_pop()
-            #map our current population to a new one
-            self.pop[:] = pool.map(map_fly, self.pop)
-            self.pop.sort()
+        return update
 
 
-    def _test_population(self, coords, cpu_count):
-        ''' runs the optimization until the mean values of change are 
-            less than a given epsilon. Returns the amount of function
-            evaluations 
+    def _prepare_run(self, func_name, dimension_count, style, draw_graph):
+        ''' this prepares the environment before we begin
+            a simulation run
         '''
 
-        # initialize our process pool
-        i = 0
-        pool = Pool(processes=cpu_count)
+        # get the objective function
+        func = self._funcs[func_name](dimension_count)
+        
+        # create our populations
+        self.pop = self._generate_pop(self.size, func)
+        self.oldpop = self._generate_pop(self.size, func)
+        
+        # scale our gamma 
+        self.gamma = self.gamma0 / (func.maxs[0] - func.mins[0])
 
-        while True:
-            # draw if we are supposed to be visualization
-            if coords is not None:
-                coords.set_xdata([fly.coords[0] for fly in self.pop])
-                coords.set_ydata([fly.coords[1] for fly in self.pop])
-                draw()
+        # setup drawing if necessary
+        if draw_graph:
+            ion()
+            coords, = plot([fly.coords[0] for fly in self.pop], [fly.coords[1] for fly in self.pop], 'o')
+        else:
+            coords = None
 
-            # copy our population over to old one as well
-            self._copy_pop()
-            
-            # map our current population to a new one
-            self.pop[:] = pool.map(map_fly, self.pop)
+        # create our schedule for alpha
+        update = self._get_schedule(style)
 
-            # calculate the delta of the means
-            #if self._delta_of_means() < Population.EPSILON:
-            if self._less_than_e(0.0, Population.EPSILON):
-                break
-            
-            self.pop.sort()
-            i += 1
-
-        return i * len(self.pop) 
-
-    def _hpop(self, coords, cpu_count):
+        # return coords and schedule function
+        return (coords, update)
+        
+    def _map_pop(self, coords, sched_func, cpu_count):
         ''' _hpop runs the hybrid firefly algorithm 
         '''
 
@@ -203,8 +187,7 @@ class Population:
                 draw()
             
             #calculate our new alpha value based on the annealing schedule
-            #this may change to allow for a user chosen schedule
-            self.alpha = self.alpha0 / m.log(i)
+            self.alpha = sched_func(i)
             
             #copy our population over to old one as well
             self._copy_pop()
@@ -216,7 +199,7 @@ class Population:
             self.pop[:] = pool.map(hybrid_map_fly, self.pop)
             self.pop.sort()
 
-    def _hybrid_test_population(self, coords, cpu_count):
+    def _test_map_pop(self, coords, schedule, cpu_count):
         ''' runs the optimization until the mean values of change are
             less than a given epsilon. Returns the amoung of function
             evaluations 
@@ -242,7 +225,7 @@ class Population:
 
             # calculate our new alpha value based on the annealing schedule
             # this may change to allow for a user chosen schedule
-            self.alpha = self.alpha0 / float(log(i))
+            self.alpha = schedule(i)
             
             # copy our population over to old one as well
             self._copy_pop()
@@ -253,12 +236,12 @@ class Population:
             # map our current population to a new one
             self.pop[:] = pool.map(hybrid_map_fly, self.pop)
             
+            self.pop.sort()
+
             # calculate the delta of the means
-            #if self._delta_of_means() < Population.EPSILON:
-            if self._less_than_e(0.0, Population.EPSILON):
+            if self._delta_of_means() < Population.EPSILON:
                 break
             
-            self.pop.sort()
             i += 1
 
         return int(i - 2) * len(self.pop)
@@ -269,13 +252,6 @@ class Population:
 
         for fly, oldfly in zip(self.pop, self.oldpop):
             oldfly.copy(fly)
-
-    def _less_than_e(self, optimum, epsilon):
-        ''' returns if the minimum fly is less than 
-            a given epsilon
-        '''
-
-        return fabs(min(self.pop).val - optimum) < epsilon
 
     def _delta_of_means(self):
         ''' calculates the delta of the mean values 
