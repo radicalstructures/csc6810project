@@ -1,7 +1,7 @@
 ''' Functions for PyFirefly 
 '''
 
-import math
+import math as m
 import pycuda.autoinit
 import pycuda.gpuarray as gp
 import pycuda.driver as drv
@@ -13,16 +13,7 @@ def DeJung(dim):
         mins and maxs defined 
     '''
 
-    krnl = rk.ReductionKernel(np.float32, neutral='0',
-                reduce_expr='a + b', map_expr='a[i]*a[i]',
-                arguments='float *a')
-
-    def dejung(coords):
-        gpvals = gp.to_gpu(coords)
-        val = krnl(gpvals).get()
-        return val
-
-    return ObjFunc(_dejung, [-5.14]*dim, [5.14]*dim)
+    return ObjFunc(_dejung, [-5.14]*dim, [5.14]*dim, [0.0]*dim)
 
 def Ackley(dim):
     ''' returns the ackley objective function with
@@ -36,7 +27,7 @@ def Michalewicz(dim):
         mins and maxs defined 
     '''
 
-    return ObjFunc(_michalewicz, [0.0]*dim, [math.pi]*dim)
+    return ObjFunc(_michalewicz, [0.0]*dim, [m.pi]*dim)
 
 def Rastrigin(dim):
     ''' returns the Rastrigin objective function with
@@ -52,6 +43,15 @@ def Rosenbrock(dim):
 
     return ObjFunc(_rosenbrock, [-5.0]*dim, [10.]*dim)
 
+def Easom(dim):
+    ''' returns the Easom objective function with
+        mins and maxs defined
+    '''
+    if dim != 2:
+        raise
+
+    return ObjFunc(_easom, [-100.0, -100.0], [100.0, 100.0], [m.pi, m.pi])
+
 def _dejung(coords):
     ''' the sphere (dejung) function 
     '''
@@ -65,21 +65,21 @@ def _ackley(coords):
     n = len(coords)
     a = 20.0
     b = 0.2
-    c = 2.0 * math.pi
+    c = 2.0 * m.pi
     s1 = s2 = 0.0
 
     for i in coords:
         s1 += i**2.0
-        s2 += math.cos(c*i)
+        s2 += m.cos(c*i)
 
-    return -a * math.exp(-b * math.sqrt((1.0/n) * s1)) - \
-            math.exp((1.0/n) * s2) + a + math.e
+    return -a * m.exp(-b * m.sqrt((1.0/n) * s1)) - \
+            m.exp((1.0/n) * s2) + a + m.e
 
 def _rastrigin(coords):
     ''' rastrigin function 
     '''
 
-    return 20 + sum([x**2.0 - 10.0*math.cos(2.0 * math.pi * x) for x in coords])
+    return 20 + sum([x**2.0 - 10.0*m.cos(2.0 * m.pi * x) for x in coords])
 
 def _rosenbrock(coords):
     ''' rosenbrock function
@@ -92,18 +92,26 @@ def _michalewicz(coords):
     ''' michalewicz function
     '''
     m = 10.0
-    return -sum([math.sin(coord) * (math.sin(i * coord**2.0 / math.pi))**(2.0 * m) \
+    return -sum([m.sin(coord) * (m.sin(i * coord**2.0 / m.pi))**(2.0 * m) \
             for i, coord in enumerate(coords)])
+
+def _easom(coords):
+    ''' easom function
+    '''
+    x1 = coords[0]
+    x2 = coords[1]
+    return -m.cos(x1) * m.cos(x2) * m.exp((-(x1 - m.pi)**2.0) - ((x2 - m.pi)**2.0))
 
 class ObjFunc:
     ''' This is our objective function.
         It contains the function as well as its bounds
     '''
 
-    def __init__(self, func, mins, maxs):
+    def __init__(self, func, mins, maxs, xstar):
         self.func = func
         self.mins = mins
         self.maxs = maxs
+        self.xstar = xstar
 
     def eval(self, coords):
         ''' Evaluates the function 

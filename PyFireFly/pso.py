@@ -1,8 +1,9 @@
 ''' particle swarm optimization algorithm
     used for comparison against firefly
 '''
-from functions import *
 import numpy as np
+from math import fabs
+from functions import *
 from BIP.Bayes.lhs import lhs
 from scipy.stats import uniform
 
@@ -33,6 +34,10 @@ class PSO(object):
         return [Particle(func, np.array(seeds[i])) for i in xrange(size)]
 
     def run(self, func_name, dim_count):
+        ''' runs the simulation given the function name
+            and dimension count
+        '''
+
         func = self._funcs[func_name](dim_count)
 
         self.pop = self.generate_pop(self.size, func)
@@ -42,7 +47,30 @@ class PSO(object):
             self.pop = [p.map_eval(self.best.position, self.alpha, self.beta) for p in self.pop]
 
         self.best = min(self.pop)
-        print self.best
+
+    def delta_of_xstar(self, func_name, dimension_count):
+        ''' this will return |f(x*) - f(x_best)|
+        '''
+
+        # get the objective function
+        func = self._funcs[func_name](dimension_count)
+
+        # x* value
+        val = func.eval(func.xstar)
+
+        # get best fly value
+        bestval = min(self.pop).val
+
+        return fabs(val - bestval)
+
+    def _generate_pop(self, size, func):
+        ''' initializes our population 
+        '''
+        
+        dim = len(func.maxs)
+        params = [(func.mins[i], func.maxs[i] - func.mins[i]) for i in xrange(dim)]
+        seeds = np.array(lhs([uniform]*dim, params, size, True, np.identity(dim))).T
+        seeds.astype(np.float32)
 
 
         
@@ -85,9 +113,11 @@ class Particle(object):
 
     def move(self, global_best, alpha, beta):
         for i, coord in enumerate(self.velocity):
-            self.velocity[i] = coord + ((alpha*(uniform.rvs()))*(global_best[i] - self.position[i])) + \
+            tval = coord + ((alpha*(uniform.rvs()))*(global_best[i] - self.position[i])) + \
                     ((beta * uniform.rvs()) * (self.best[i] - self.position[i]))
             
+            self.velocity[i] = self.func.mins[i] if tval < self.func.mins[i] \
+                    else self.func.maxs[i] if tval > self.func.maxs[i] else tval
 
         for i, coord in enumerate(self.position):
             tval = coord + self.velocity[i]
