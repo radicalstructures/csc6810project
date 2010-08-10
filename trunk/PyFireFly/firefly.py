@@ -129,7 +129,7 @@ class Population:
             # alpha = alpha0 * exp(-c * t**quench)
             # c = m * exp(-n * quench)
             c = 1.0 * m.exp(-1.0 * 1.0)
-            update = lambda t: self.alpha0 * m.exp(-c * t**(1.0))
+            update = lambda t: self.alpha0 * m.exp(-c * (float(t)**(1.0)))
         else:
             raise
 
@@ -165,7 +165,7 @@ class Population:
         return (coords, update)
         
     def _map_pop(self, coords, sched_func, cpu_count):
-        ''' _hpop runs the hybrid firefly algorithm 
+        ''' _hpop runs the firefly algorithm 
         '''
 
         #initialize our process pool
@@ -196,7 +196,7 @@ class Population:
             self.pop[:] = [set_pop(fly) for fly in self.pop]
 
             #map our current population to a new one
-            self.pop[:] = pool.map(hybrid_map_fly, self.pop)
+            self.pop[:] = pool.map(map_fly, self.pop)
             self.pop.sort()
 
     def _test_map_pop(self, coords, schedule, cpu_count):
@@ -234,7 +234,7 @@ class Population:
             self.pop[:] = [set_pop(fly) for fly in self.pop]
 
             # map our current population to a new one
-            self.pop[:] = pool.map(hybrid_map_fly, self.pop)
+            self.pop[:] = pool.map(map_fly, self.pop)
             
             self.pop.sort()
 
@@ -306,20 +306,8 @@ class FireFly:
         self.coords[:] = fly.coords
 
     def map(self):
-        ''' nmap maps a firefly to its new position 
-        '''
-
-        #compare ourself to other flies and update
-        reduce(flyfold, self.pop.oldpop, self)
-        
-        #reevaluate ourselves in function space
-        self.eval()
-        
-        return self
-
-    def hybrid_map(self):
-        ''' hybrid_map maps a firefly to its new 
-            position using the hybrid technique 
+        ''' map maps a firefly to its new 
+            position
         '''
         
         #reset moved to False
@@ -407,17 +395,13 @@ def flyfold(fly, otherfly):
     ''' this is the function used for folding over a list of flies 
     '''
 
-    return fly.nfoldf(otherfly)
+    fly.nfoldf(otherfly)
+    return fly
 
 def map_fly(fly):
     ''' this is a weird workaround to be able to use the pool 
     '''
-    
-    return fly.map()
 
-def hybrid_map_fly(fly):
-    ''' this is a weird workaround to be able to use the pool 
-    '''
-
-    return fly.hybrid_map()
+    fly.map()
+    return fly
 

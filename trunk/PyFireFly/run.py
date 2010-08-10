@@ -4,7 +4,7 @@ from sys import argv
 from math import fabs
 
 def main(args):
-    f = Population(10, 40, 1.0, 1.0, 1.0)
+    f = Population(10, 40, 0.8, 1.0, 1.0)
     pso = PSO(10, 40, 2.0, 2.0)
     for _ in range(int(args[4])):
 
