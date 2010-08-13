@@ -15,7 +15,7 @@ def write_coords(filename, pop):
     with open(filename, 'w') as outputfile:
         for fly in pop.pop:
             for coord in fly.coords:
-                outputfile.write(str(coord) + ' ')
+                outputfile.write(str(coord) + ',')
             outputfile.write('\n')
 
 class Population:
@@ -29,11 +29,12 @@ class Population:
     FAST = 4
     EPSILON = 1e-5
 
-    _funcs = { 'dejung' : DeJung ,
+    _funcs = { 'sphere' : Sphere ,
             'ackley' : Ackley,
             'michalewicz' : Michalewicz,
             'rosenbrock' : Rosenbrock,
-            'rastrigin' : Rastrigin}
+            'rastrigin' : Rastrigin,
+            'easom' : Easom}
 
     def __init__(self, gen, size, alpha, beta, gamma):
         ''' Setup sets the initialization parameters 
@@ -85,20 +86,32 @@ class Population:
         self.pop.sort()
         return self.pop[0]
 
-    def delta_of_xstar(self, func_name, dimension_count):
+    def is_within_epsilon(self, fly, func_name, dimension_count, epsilon=0.01):
         ''' this will return |f(x*) - f(x_best)|
+            from the latest run
         '''
 
         # get the objective function
         func = self._funcs[func_name](dimension_count)
 
-        # x* value
-        val = func.eval(func.xstar)
+        # x* + epsilon value
+        xplusep = [x + epsilon for x in func.xstar]
+        plusval = func.eval(xplusep)
 
-        # get best fly's value
-        bestval = min(self.pop).val
+        # x* - epsilon value
+        xminusep = [x - epsilon for x in func.xstar]
+        minusval = func.eval(xminusep)
 
-        return m.fabs(val - bestval)
+        xstarval = func.eval(func.xstar)
+
+        bestval = fly.val
+        plusval = xstarval + plusval
+        minusval = xstarval - minusval
+
+        print 'plusval is', plusval, 'minus val is', minusval, 'best is', bestval
+
+        return (bestval <= plusval and bestval >= minusval) or \
+                (bestval <= minusval and bestval >= plusval)
 
     def _generate_pop(self, size, func):
         ''' initializes our population 
@@ -305,16 +318,16 @@ class FireFly:
         self.val = fly.val
         self.coords[:] = fly.coords
 
-    def map(self):
+    def map(self, flies):
         ''' map maps a firefly to its new 
-            position
+            position given a list to compare to
         '''
         
         #reset moved to False
         self.moved = False
         
         #compare ourself to other flies and update
-        reduce(flyfold, self.pop.oldpop, self)
+        reduce(flyfold, flies, self)
 
         #if we didn't move, we are a local best
         #in that case, move a little bit randomly
@@ -402,6 +415,6 @@ def map_fly(fly):
     ''' this is a weird workaround to be able to use the pool 
     '''
 
-    fly.map()
+    fly.map(fly.pop.oldpop)
     return fly
 

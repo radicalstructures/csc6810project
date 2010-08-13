@@ -3,45 +3,45 @@ from pso import *
 from sys import argv
 from math import fabs
 
-def main(args):
-    f = Population(10, 40, 0.8, 1.0, 1.0)
-    pso = PSO(10, 40, 2.0, 2.0)
-    for _ in range(int(args[4])):
+def run(func_name, dimension_count, cpu_count, iteration_count, draw_graph):
+    f = Population(15, 40, 0.5, 1.0, 1.0)
+    pso = PSO(15, 40, 2.0, 2.0)
+    with open('./data/' + func_name + '.csv', 'w') as file:
+        for _ in range(iteration_count):
 
-        # calculate the PSO values
-        pso.run(args[1],int(args[2]))
-        psoval = pso.delta_of_xstar(args[1], int(args[2]))
+            # calculate the PSO values
+            bestpart = pso.run(func_name, dimension_count)
+            psoval = bestpart.val
 
-        # calculate the FA with no schedule
-        f.run(args[1], int(args[2]), Population.NONE, int(args[3]), bool(args[5]))
+            # calculate the FA with no schedule
+            best = f.run(func_name, dimension_count, Population.NONE, cpu_count, draw_graph)
 
-        nonval = f.delta_of_xstar(args[1], int(args[2]))
+            nonval = best.val 
 
-        # calculate the FA with the Boltzmann schedule
-        f.run(args[1], int(args[2]), Population.BOLTZMANN, int(args[3]), bool(args[5]))
-        
-        boltzval = f.delta_of_xstar(args[1], int(args[2]))
-        
-        # calculate the FA with the Cauchy schedule
-        f.run(args[1], int(args[2]), Population.CAUCHY, int(args[3]), bool(args[5]))
+            # calculate the FA with the Boltzmann schedule
+            best = f.run(func_name, dimension_count, Population.BOLTZMANN, cpu_count, draw_graph)
+            
+            boltzval = best.val
+            
+            # calculate the FA with the Cauchy schedule
+            best = f.run(func_name, dimension_count, Population.CAUCHY, cpu_count, draw_graph)
 
-        cauchval = f.delta_of_xstar(args[1], int(args[2]))
+            cauchval = best.val
 
-        # calculate the FA with the Fast schedule
-        f.run(args[1], int(args[2]), Population.FAST, int(args[3]), bool(args[5]))
+            # calculate the FA with the Fast schedule
+            best = f.run(func_name, dimension_count, Population.FAST, cpu_count, draw_graph)
 
-        fastval = f.delta_of_xstar(args[1], int(args[2]))
+            fastval = best.val
 
-        print psoval, ',', nonval, ',', boltzval, ',', cauchval, ',', fastval
+            file.write(str(psoval) + ',' + str(nonval) + ',' + str(boltzval) + ',' + str(cauchval) + ',' + str(fastval))
+
+def experiment():
+    run('sphere', 2, 2,100, False)
+    run('ackley', 128, 2,100, False)
+    run('michalewicz', 16, 2,100, False)
+    run('rosenbrock', 16, 2,100, False)
+    run('rastrigin', 16, 2,100, False)
+    run('easom', 2, 2,100, False)
 
 if __name__ == '__main__':
-    if len(argv) != 6:
-        argv = ['run.py']
-        argv.append('dejung')
-        argv.append(3)
-        argv.append(2)
-        argv.append(1)
-        argv.append(False)
-
-    argv[5] = argv[5].lower() == 'true'
-    main(argv)
+    experiment()
