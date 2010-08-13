@@ -8,19 +8,19 @@ import pycuda.driver as drv
 import pycuda.reduction as rk
 import numpy as np
 
-def DeJung(dim):
-    ''' returns the dejung objective function with 
+def Sphere(dim):
+    ''' returns the sphere objective function with 
         mins and maxs defined 
     '''
 
-    return ObjFunc(_dejung, [-5.14]*dim, [5.14]*dim, [0.0]*dim)
+    return ObjFunc(_sphere, [-5.14]*dim, [5.14]*dim, [0.0]*dim)
 
 def Ackley(dim):
     ''' returns the ackley objective function with
         mins and maxs defined 
     '''
 
-    return ObjFunc(_ackley, [-30.0]*dim, [30.0]*dim)
+    return ObjFunc(_ackley, [-30.0]*dim, [30.0]*dim, [0.0]*dim)
 
 def Michalewicz(dim):
     ''' returns the michalewicz objective function with
@@ -34,14 +34,14 @@ def Rastrigin(dim):
         mins and maxs defined 
     '''
 
-    return ObjFunc(_rastrigin, [-5.0]*dim, [5.0]*dim)
+    return ObjFunc(_rastrigin, [-5.0]*dim, [5.0]*dim, [0.0]*dim)
 
 def Rosenbrock(dim):
     ''' returns the Rosenbrock objective function with
         mins and maxs defined
     '''
 
-    return ObjFunc(_rosenbrock, [-5.0]*dim, [10.]*dim)
+    return ObjFunc(_rosenbrock, [-5.0]*dim, [10.]*dim, [1.0]*dim)
 
 def Easom(dim):
     ''' returns the Easom objective function with
@@ -52,8 +52,8 @@ def Easom(dim):
 
     return ObjFunc(_easom, [-100.0, -100.0], [100.0, 100.0], [m.pi, m.pi])
 
-def _dejung(coords):
-    ''' the sphere (dejung) function 
+def _sphere(coords):
+    ''' the sphere (sphere) function 
     '''
 
     return sum([x**2.0 for x in coords])

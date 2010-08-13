@@ -9,11 +9,12 @@ from scipy.stats import uniform
 
 class PSO(object):
     
-    _funcs = { 'dejung' : DeJung ,
+    _funcs = { 'sphere' : Sphere ,
             'ackley' : Ackley,
             'michalewicz' : Michalewicz,
             'rosenbrock' : Rosenbrock,
-            'rastrigin' : Rastrigin}
+            'rastrigin' : Rastrigin,
+            'easom' : Easom}
 
     def __init__(self, gen, size, alpha, beta):
         self.gen = int(gen)
@@ -47,21 +48,28 @@ class PSO(object):
             self.pop = [p.map_eval(self.best.position, self.alpha, self.beta) for p in self.pop]
 
         self.best = min(self.pop)
+        return self.best
 
-    def delta_of_xstar(self, func_name, dimension_count):
+    def is_within_epsilon(self, particle, func_name, dimension_count, epsilon=0.01):
         ''' this will return |f(x*) - f(x_best)|
+            from the latest run
         '''
 
         # get the objective function
         func = self._funcs[func_name](dimension_count)
 
-        # x* value
-        val = func.eval(func.xstar)
+        # x* + epsilon value
+        xplusep = [x + epsilon for x in func.xstar]
+        plusval = func.eval(xplusep)
 
-        # get best fly value
-        bestval = min(self.pop).val
+        # x* - epsilon value
+        xminusep = [x - epsilon for x in func.xstar]
+        minusval = func.eval(xminusep)
 
-        return fabs(val - bestval)
+        bestval = particle.val
+
+        return (bestval <= plusval and bestval >= minusval) or \
+                (bestval <= minusval and bestval >= plusval)
 
     def _generate_pop(self, size, func):
         ''' initializes our population 
@@ -124,8 +132,6 @@ class Particle(object):
             
             self.position[i] = self.func.mins[i] if tval < self.func.mins[i] \
                     else self.func.maxs[i] if tval > self.func.maxs[i] else tval
-
-        self.eval()
 
     
         
