@@ -2,10 +2,6 @@
 '''
 
 import math as m
-import pycuda.autoinit
-import pycuda.gpuarray as gp
-import pycuda.driver as drv
-import pycuda.reduction as rk
 import numpy as np
 
 def Sphere(dim):

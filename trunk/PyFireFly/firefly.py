@@ -401,7 +401,8 @@ class FireFly:
         '''
         
         beta = (beta0 * m.exp((-gamma) * (dist**2.0)))
-        return beta if beta > self.BETA_MIN else self.BETA_MIN
+        #return beta if beta > self.BETA_MIN else self.BETA_MIN
+        return beta
 
 #These functions just help with the higher order functions
 def flyfold(fly, otherfly):
