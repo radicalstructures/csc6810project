@@ -16,7 +16,7 @@ class SA(object):
     CAUCHY = 2
     FAST = 3
 
-    _obj_funcs = { 'dejung' : DeJung ,
+    _obj_funcs = { 'sphere' : Sphere ,
             'ackley' : Ackley,
             'michalewicz' : Michalewicz,
             'rosenbrock' : Rosenbrock,
