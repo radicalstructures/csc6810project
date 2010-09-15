@@ -57,15 +57,15 @@ class SA(object):
         '''
 
         if style == SA.BOLTZMANN:
-            update = lambda t_current: self.t_initial / m.log(float(t_current))
+            update = lambda k_current: self.t_initial / m.log(float(k_current))
         elif style == SA.CAUCHY:
-            update = lambda t_current: self.t_initial / float(t_current)
+            update = lambda k_current: self.t_initial / float(k_current)
         elif style == SA.FAST:
             # perhaps we should ask for values of quench, m, and n at some point...
             # alpha = alpha0 * exp(-c * t**quench)
             # c = m * exp(-n * quench)
             c = 1.0 * m.exp(-1.0 * 1.0)
-            update = lambda t_current: self.t_initial * m.exp(-c * (float(t_current)**(1.0)))
+            update = lambda k_current: self.t_initial * m.exp(-c * (float(k_current)**(1.0)))
         else:
             raise
 
@@ -100,10 +100,10 @@ class SA(object):
         t_current = self.t_initial
 
         while t_current > self.tfinal:
-            k_current += 1
             # run until temperature is low enough
+            k_current += 1
             t_current = schedule(k_current)
-            print t_current
+
             state = self._get_state(objfunc)
             current_val = objfunc.eval(state)
 
