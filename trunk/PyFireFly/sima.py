@@ -39,17 +39,17 @@ class SA(object):
         state_final = self._anneal(objfunc, schedule, prob)
         return state_final
 
-    def _get_state(self, objfunc):
+    def _get_state(self, objfunc, state, params):
         ''' setup the initial state
         '''
 
-        size = 1
-        dim = len(objfunc.maxs)
-        params = [(objfunc.mins[i], objfunc.maxs[i] - objfunc.mins[i]) for i in xrange(dim)]
-        #seeds = np.array(lhs([uniform]*dim, params, size, True, np.identity(dim))).T
-        seeds = np.array([param * uniform.rvs() for p, param in params])
-        seeds.astype(np.float32)
-        return seeds
+        def adjust_offset(value, minval, maxval):
+            # keep within bounds
+            return maxval if value > maxval else minval if value < minval else value
+
+        seeds = np.array([param * uniform.rvs() for param in params])
+        state = np.array([adjust_offset(s + seeds[i], objfunc.mins[i], objfunc.maxs[i]) for i, s in enumerate(state)])
+        return state
 
     def _get_schedule(self, style):
         ''' this gets our annealing schedule based
@@ -93,9 +93,13 @@ class SA(object):
         '''
 
         k_current = 1
-        state0 = self._get_state(objfunc)
+        # get our initial state
         dim = len(objfunc.maxs)
-        best = np.array(state0)
+        params = [objfunc.maxs[i] - objfunc.mins[i] for i in xrange(dim)]
+        state = self._get_state(objfunc, [0.0]*dim, params)
+        state = [s + objfunc.mins[i] for i, s in enumerate(state)]
+
+        best = np.array(state)
         best_val = objfunc.eval(best)
         t_current = self.t_initial
 
@@ -104,7 +108,7 @@ class SA(object):
             k_current += 1
             t_current = schedule(k_current)
 
-            state = self._get_state(objfunc)
+            state = self._get_state(objfunc, state, [1.0]*dim)
             current_val = objfunc.eval(state)
 
             if uniform.rvs() < probfunc(t_current, current_val, best_val, dim):
