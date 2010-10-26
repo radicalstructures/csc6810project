@@ -50,26 +50,23 @@ class PSO(object):
         self.best = min(self.pop)
         return self.best
 
-    def is_within_epsilon(self, particle, func_name, dimension_count, epsilon=0.01):
-        ''' this will return |f(x*) - f(x_best)|
-            from the latest run
-        '''
+    def test(self, func_name, dim_count):
 
-        # get the objective function
-        func = self._funcs[func_name](dimension_count)
+        func = self._funcs[func_name](dim_count)
+        self.pop = self.generate_pop(self.size, func)
 
-        # x* + epsilon value
-        xplusep = [x + epsilon for x in func.xstar]
-        plusval = func.eval(xplusep)
+        self.best = min(self.pop)
+        worst = max(self.pop)
+        i = 0
+        while not is_lessthan_eps(self.best.val, worst.val):
+            self.best = min(self.pop)
+            worst = max(self.pop)
+            self.pop = [p.map_eval(self.best.position, self.alpha, self.beta) for p in self.pop]
+            i += len(self.pop)
 
-        # x* - epsilon value
-        xminusep = [x - epsilon for x in func.xstar]
-        minusval = func.eval(xminusep)
-
-        bestval = particle.val
-
-        return (bestval <= plusval and bestval >= minusval) or \
-                (bestval <= minusval and bestval >= plusval)
+        self.best = min(self.pop)
+        success = is_success(self.best.val, self.best.func)
+        return (i, success)
 
     def _generate_pop(self, size, func):
         ''' initializes our population 
@@ -79,8 +76,6 @@ class PSO(object):
         params = [(func.mins[i], func.maxs[i] - func.mins[i]) for i in xrange(dim)]
         seeds = np.array(lhs([uniform]*dim, params, size, True, np.identity(dim))).T
         seeds.astype(np.float32)
-
-
         
 class Particle(object):
 
