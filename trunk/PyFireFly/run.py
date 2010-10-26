@@ -3,6 +3,11 @@ from pso import *
 from sys import argv
 from math import fabs
 
+def test():
+    f = Population(15, 40, 0.5, 1.0, 1.0)
+    i, success = f.test('sphere', 5, Population.BOLTZMANN, 1)
+    print i, success
+
 def run(func_name, dimension_count, cpu_count, iteration_count, draw_graph):
     f = Population(15, 40, 0.5, 1.0, 1.0)
     pso = PSO(15, 40, 2.0, 2.0)
@@ -36,12 +41,13 @@ def run(func_name, dimension_count, cpu_count, iteration_count, draw_graph):
             file.write(str(psoval) + ',' + str(nonval) + ',' + str(boltzval) + ',' + str(cauchval) + ',' + str(fastval))
 
 def experiment():
-    run('sphere', 2, 2,100, False)
-    run('ackley', 128, 2,100, False)
-    run('michalewicz', 16, 2,100, False)
-    run('rosenbrock', 16, 2,100, False)
-    run('rastrigin', 16, 2,100, False)
-    run('easom', 2, 2,100, False)
+    #run('sphere', 2, 2,100, False)
+    #run('ackley', 128, 2,100, False)
+    #run('michalewicz', 16, 2,100, False)
+    #run('rosenbrock', 16, 2,100, False)
+    #run('rastrigin', 16, 2,100, False)
+    #run('easom', 2, 2,100, False)
+    test()
 
 if __name__ == '__main__':
     experiment()

@@ -4,6 +4,26 @@
 import math as m
 import numpy as np
 
+def is_lessthan_eps(max, min, epsilon=0.01):
+    ''' this will return |f(x_max) - f(x_min)| <= epsilon
+        from the latest run
+    '''
+
+    val = m.fabs(max - min)
+    print val
+    return val <= epsilon
+
+
+def is_success(best, func, epsilon=0.01):
+    ''' this will check if the search was a success
+        |f* - f_best| <= f*_epsilon
+    '''
+
+    f_star = func.eval(func.xstar)
+    f_eps  = f_star + (9.0 * epsilon)
+
+    return m.fabs(f_star - best) <= f_eps
+
 def Sphere(dim):
     ''' returns the sphere objective function with 
         mins and maxs defined 

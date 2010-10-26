@@ -2,7 +2,6 @@
     continuous optimization problems'''
 import math as m
 import numpy as np
-from pylab import ion, draw, plot
 from BIP.Bayes.lhs import lhs
 from scipy.stats import uniform
 from multiprocessing import Pool
@@ -54,64 +53,38 @@ class Population:
     def __str__(self):
         return str(self.pop)
 
-    def run(self, func_name, dimension_count, style=NONE, cpu_count=1, draw_graph=False):
+    def run(self, func_name, dimension_count, style=NONE, cpu_count=1):
         ''' Run begins the optimization based 
             on the initialization parameters given 
         '''
 
         # prepare before the run
-        coords, update = self._prepare_run(func_name, dimension_count, style, draw_graph)
+        update = self._prepare_run(func_name, dimension_count, style)
 
         # run the algorithm
-        self._map_pop(coords, update, cpu_count)
+        self._map_pop(update, cpu_count)
 
         # sort the population and return best
         self.pop.sort()
         return self.pop[0]
 
-    def test(self, func_name, dimension_count, style=NONE, cpu_count=1, draw_graph=False):
-        ''' Runs the Firefly algorithm until the mean delta of
-            the values is less than EPSILON 
+    def test(self, func_name, dimension_count, style=NONE, cpu_count=1):
+        ''' Runs the Firefly algorithm until is_lessthan_eps is true 
+            returns the tuple (iterations, is_success)
         '''
 
         # prepare before the run
-        coords, update = self._prepare_run(func_name, dimension_count, style, draw_graph)
+        update = self._prepare_run(func_name, dimension_count, style)
 
         # run the algorithm
-        i = self._test_map_pop(coords, update, cpu_count)
+        i = self._test_map_pop(update, cpu_count)
 
-        print 'ran', i, 'iterations until stopped'
 
         # sort the population and return the best
         self.pop.sort()
-        return self.pop[0]
+        success = is_success(self.pop[0].val, self.pop[0].func)
+        return (i, success)
 
-    def is_within_epsilon(self, fly, func_name, dimension_count, epsilon=0.01):
-        ''' this will return |f(x*) - f(x_best)|
-            from the latest run
-        '''
-
-        # get the objective function
-        func = self._funcs[func_name](dimension_count)
-
-        # x* + epsilon value
-        xplusep = [x + epsilon for x in func.xstar]
-        plusval = func.eval(xplusep)
-
-        # x* - epsilon value
-        xminusep = [x - epsilon for x in func.xstar]
-        minusval = func.eval(xminusep)
-
-        xstarval = func.eval(func.xstar)
-
-        bestval = fly.val
-        plusval = xstarval + plusval
-        minusval = xstarval - minusval
-
-        print 'plusval is', plusval, 'minus val is', minusval, 'best is', bestval
-
-        return (bestval <= plusval and bestval >= minusval) or \
-                (bestval <= minusval and bestval >= plusval)
 
     def _generate_pop(self, size, func):
         ''' initializes our population 
@@ -122,7 +95,7 @@ class Population:
         seeds = np.array(lhs([uniform]*dim, params, size, True, np.identity(dim))).T
         seeds.astype(np.float32)
 
-        flies = [FireFly(func, self, dim, np.array(seeds[i])) for i in xrange(size)]
+        flies = [FireFly(func, self, np.array(seeds[i])) for i in xrange(size)]
 
         return flies
 
@@ -149,7 +122,7 @@ class Population:
         return update
 
 
-    def _prepare_run(self, func_name, dimension_count, style, draw_graph):
+    def _prepare_run(self, func_name, dimension_count, style):
         ''' this prepares the environment before we begin
             a simulation run
         '''
@@ -164,20 +137,13 @@ class Population:
         # scale our gamma 
         self.gamma = self.gamma0 / (func.maxs[0] - func.mins[0])
 
-        # setup drawing if necessary
-        if draw_graph:
-            ion()
-            coords, = plot([fly.coords[0] for fly in self.pop], [fly.coords[1] for fly in self.pop], 'o')
-        else:
-            coords = None
-
         # create our schedule for alpha
         update = self._get_schedule(style)
 
         # return coords and schedule function
-        return (coords, update)
+        return update
         
-    def _map_pop(self, coords, sched_func, cpu_count):
+    def _map_pop(self, sched_func, cpu_count):
         ''' _hpop runs the firefly algorithm 
         '''
 
@@ -193,12 +159,6 @@ class Population:
 
         #start at 2 for the log function. do same amount of steps
         for i in xrange(2, self.gen + 2):
-            #draw if we are supposed to be visualization
-            if coords is not None:
-                coords.set_xdata([fly.coords[0] for fly in self.pop])
-                coords.set_ydata([fly.coords[1] for fly in self.pop])
-                draw()
-            
             #calculate our new alpha value based on the annealing schedule
             self.alpha = sched_func(i)
             
@@ -212,7 +172,7 @@ class Population:
             self.pop[:] = pool.map(map_fly, self.pop)
             self.pop.sort()
 
-    def _test_map_pop(self, coords, schedule, cpu_count):
+    def _test_map_pop(self, schedule, cpu_count):
         ''' runs the optimization until the mean values of change are
             less than a given epsilon. Returns the amoung of function
             evaluations 
@@ -230,12 +190,6 @@ class Population:
             return fly
 
         while True:
-            #draw if we are supposed to be visualization
-            if coords is not None:
-                coords.set_xdata([fly.coords[0] for fly in self.pop])
-                coords.set_ydata([fly.coords[1] for fly in self.pop])
-                draw()
-
             # calculate our new alpha value based on the annealing schedule
             # this may change to allow for a user chosen schedule
             self.alpha = schedule(i)
@@ -252,7 +206,7 @@ class Population:
             self.pop.sort()
 
             # calculate the delta of the means
-            if self._delta_of_means() < Population.EPSILON:
+            if is_lessthan_eps(self.pop[0].val, self.pop[len(self.pop)-1].val):
                 break
             
             i += 1
@@ -286,7 +240,7 @@ class FireFly:
 
     BETA_MIN = 0.05
 
-    def __init__(self, objfunc, population, dim, seeds):
+    def __init__(self, objfunc, population, seeds):
         self.func = objfunc
         self.pop = population
         self.coords = seeds
@@ -401,8 +355,8 @@ class FireFly:
         '''
         
         beta = (beta0 * m.exp((-gamma) * (dist**2.0)))
-        #return beta if beta > self.BETA_MIN else self.BETA_MIN
-        return beta
+        return beta if beta > self.BETA_MIN else self.BETA_MIN
+        #return beta
 
 #These functions just help with the higher order functions
 def flyfold(fly, otherfly):
