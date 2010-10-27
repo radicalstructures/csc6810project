@@ -88,6 +88,18 @@ class Population:
         return (i, success)
 
 
+    def iter_test(self, func_name, dimension_count, style=NONE, cpu_count=1):
+        ''' Runs the Firefly algorithm given the initialization
+            parameters, outputting a list of the best values
+            during the run
+        '''
+
+        # prepare for the run
+        update = self._prepare_run(func_name, dimension_count, style)
+
+        # run the algorithm
+        return self._iter_test_map_pop(update, cpu_count)
+
     def _generate_pop(self, size, func):
         ''' initializes our population 
         '''
@@ -215,6 +227,33 @@ class Population:
 
         return int(i - 2) * len(self.pop)
 
+    def _iter_test_map_pop(self, schedule, cpu_count):
+        ''' runs the optimization for the number of
+            iterations defined in the initialization
+            and outputs the best value for each
+            iteration
+        '''
+
+        values = []
+        for i in xrange(2, self.gen + 2):
+            #calculate our new alpha value based on the annealing schedule
+            self.alpha = schedule(i)
+            
+            #copy our population over to old one as well
+            self._copy_pop()
+
+            #map our current population to a new one
+            self.pop = [map_fly(fly) for fly in self.pop]
+            best = min(self.pop)
+            values.append(best.val)
+
+        return np.array(values)
+
+    def _test_map_pop(self, schedule, cpu_count):
+        ''' runs the optimization until the mean values of change are
+            less than a given epsilon. Returns the amoung of function
+            evaluations 
+        '''
     def _has_converged(self, fly_best, flies, epsilon=0.01, perc=0.3):
         ''' determines if the population has converged or 
             not, ending a test run
