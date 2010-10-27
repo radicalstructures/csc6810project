@@ -2,11 +2,23 @@ from firefly import *
 from pso import *
 from sys import argv
 from math import fabs
+import numpy as np
 
 def test():
-    f = Population(15, 40, 0.1, 1.0, 1.0)
-    i, success = f.test('sphere', 2, Population.BOLTZMANN, 1)
-    print i, success
+    f = Population(15, 40, 0.5, 1.0, 1.0)
+    samples = []
+    final = [np.array(range(15)).T]
+
+    with open('./data/fha_sphere.dat', 'w') as file:
+        file.write('iters   fa  faboltz facauchy    fafast\n')
+        for _ in range(2):
+            samples.append(f.iter_test('sphere', 2, Population.BOLTZMANN, 1))
+        a_samples = np.array(samples)
+        final.append(a_samples.mean(axis=0).T)
+        a_final = np.array(final).T
+        for line in a_final:
+            line.tofile(file, sep='\t')
+            file.write('\n')
 
 def run(func_name, dimension_count, cpu_count, iteration_count, draw_graph):
     f = Population(15, 40, 0.5, 1.0, 1.0)
