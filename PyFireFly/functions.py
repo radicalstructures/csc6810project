@@ -2,19 +2,25 @@
 '''
 
 import math as m
-import numpy as np
+from scipy.spatial.distance import euclidean
 
-def is_lessthan_eps(max, min, epsilon=0.01):
+def is_lessthan_eps(f_max, f_min, epsilon=0.01):
     ''' this will return |f(x_max) - f(x_min)| <= epsilon
         from the latest run
     '''
 
-    val = m.fabs(max - min)
+    val = m.fabs(f_max - f_min)
     print val
     return val <= epsilon
 
+def max_dist(c_1, c_2, epsilon=0.01):
+    ''' this will determine if || c_1 - c_2 ||
+        is less than some epsilon
+    '''
+    
+    return euclidean(c_1, c_2) <= epsilon
 
-def is_success(best, func, epsilon=0.01):
+def is_success_f(best, func, epsilon=0.01):
     ''' this will check if the search was a success
         |f* - f_best| <= f*_epsilon
     '''
@@ -23,6 +29,13 @@ def is_success(best, func, epsilon=0.01):
     f_eps  = f_star + (9.0 * epsilon)
 
     return m.fabs(f_star - best) <= f_eps
+
+def is_success_d(best, func, epsilon=0.01):
+    ''' this will check if the search was a success
+        ||x_best - x*|| <= epsilon
+    '''
+
+    return euclidean(best, func.xstar) <= epsilon
 
 def Sphere(dim):
     ''' returns the sphere objective function with 
@@ -43,7 +56,7 @@ def Michalewicz(dim):
         mins and maxs defined 
     '''
 
-    return ObjFunc(_michalewicz, [0.0]*dim, [m.pi]*dim)
+    return ObjFunc(_michalewicz, [0.0]*dim, [m.pi]*dim, [0.0]*dim) #that isn't the optima, but who cares for now.
 
 def Rastrigin(dim):
     ''' returns the Rastrigin objective function with
@@ -107,8 +120,8 @@ def _rosenbrock(coords):
 def _michalewicz(coords):
     ''' michalewicz function
     '''
-    m = 10.0
-    return -sum([m.sin(coord) * (m.sin(i * coord**2.0 / m.pi))**(2.0 * m) \
+    r = 10.0
+    return -sum([m.sin(coord) * (m.sin(i * coord**2.0 / m.pi))**(2.0 * r) \
             for i, coord in enumerate(coords)])
 
 def _easom(coords):

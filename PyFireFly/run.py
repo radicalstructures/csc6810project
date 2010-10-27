@@ -4,8 +4,8 @@ from sys import argv
 from math import fabs
 
 def test():
-    f = Population(15, 40, 0.5, 1.0, 1.0)
-    i, success = f.test('sphere', 5, Population.BOLTZMANN, 1)
+    f = Population(15, 40, 0.1, 1.0, 1.0)
+    i, success = f.test('sphere', 2, Population.BOLTZMANN, 1)
     print i, success
 
 def run(func_name, dimension_count, cpu_count, iteration_count, draw_graph):

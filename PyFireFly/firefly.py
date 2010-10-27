@@ -4,6 +4,7 @@ import math as m
 import numpy as np
 from BIP.Bayes.lhs import lhs
 from scipy.stats import uniform
+from scipy.spatial.distance import euclidean
 from multiprocessing import Pool
 from functions import *
 
@@ -40,6 +41,7 @@ class Population:
             for the population
         '''
 
+        self.m = 3.0
         self.gen = gen
         self.size = size
         self.alpha = self.alpha0 = alpha
@@ -82,7 +84,7 @@ class Population:
 
         # sort the population and return the best
         self.pop.sort()
-        success = is_success(self.pop[0].val, self.pop[0].func)
+        success = is_success_f(self.pop[0].val, self.pop[0].func)
         return (i, success)
 
 
@@ -135,7 +137,7 @@ class Population:
         self.oldpop = self._generate_pop(self.size, func)
         
         # scale our gamma 
-        self.gamma = self.gamma0 / (func.maxs[0] - func.mins[0])
+        self.gamma = self.gamma0 / ((func.maxs[0] - func.mins[0])**self.m)
 
         # create our schedule for alpha
         update = self._get_schedule(style)
@@ -198,20 +200,32 @@ class Population:
             self._copy_pop()
 
             # annoying hack to get around the cached pickle of pop
-            self.pop[:] = [set_pop(fly) for fly in self.pop]
+            #self.pop[:] = [set_pop(fly) for fly in self.pop]
 
             # map our current population to a new one
-            self.pop[:] = pool.map(map_fly, self.pop)
+            self.pop = [map_fly(fly) for fly in self.pop]
             
             self.pop.sort()
 
             # calculate the delta of the means
-            if is_lessthan_eps(self.pop[0].val, self.pop[len(self.pop)-1].val):
+            if self._has_converged(self.pop[0], self.pop[1:]):
                 break
             
             i += 1
 
         return int(i - 2) * len(self.pop)
+
+    def _has_converged(self, fly_best, flies, epsilon=0.01, perc=0.3):
+        ''' determines if the population has converged or 
+            not, ending a test run
+        '''
+        conv = True
+        for fly in flies[0:int(perc * len(flies))]:
+            if not max_dist(fly_best.coords, fly.coords, epsilon):
+                conv = False
+                break
+
+        return conv
 
     def _copy_pop(self):
         ''' copies the population coords to oldpopulation coords 
@@ -299,9 +313,9 @@ class FireFly:
 
         if self.val > fly.val:
             #calculate the distance
-            dist = self.calculate_dist(fly)
+            dist = euclidean(self.coords, fly.coords)
             #calculate the attractiveness beta
-            beta = self.calculate_beta(dist, self.pop.beta0, self.pop.gamma)
+            beta = self.calculate_beta(dist, self.pop.beta0, self.pop.gamma, self.pop.m)
             #move towards fly
             self.move(self.pop.alpha, beta, fly)
 
@@ -340,21 +354,11 @@ class FireFly:
             self.coords[i] = self.func.mins[i] if tval < self.func.mins[i] \
                     else self.func.maxs[i] if tval > self.func.maxs[i] else tval
 
-    def calculate_dist(self, fly):
-        ''' calculates the euclidean distance between flies 
-        '''
-
-        totalsum = 0.0
-        for coord, flycoord in zip(self.coords, fly.coords):
-            totalsum += (coord - flycoord)**2.0
-
-        return m.sqrt(totalsum)
-
-    def calculate_beta(self, dist, beta0, gamma):
+    def calculate_beta(self, dist, beta0, gamma, degree):
         ''' calculates the value of beta, or attraction 
         '''
         
-        beta = (beta0 * m.exp((-gamma) * (dist**2.0)))
+        beta = (beta0 * m.exp((-gamma) * (dist**degree)))
         return beta if beta > self.BETA_MIN else self.BETA_MIN
         #return beta
 
