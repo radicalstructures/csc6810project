@@ -40,33 +40,32 @@ class PSO(object):
         '''
 
         func = self._funcs[func_name](dim_count)
-
         self.pop = self.generate_pop(self.size, func)
+        self.best = min(self.pop)
 
         for _ in xrange(self.gen):
-            self.best = min(self.pop)
             self.pop = [p.map_eval(self.best.position, self.alpha, self.beta) for p in self.pop]
+            self.best = min(self.pop)
 
-        self.best = min(self.pop)
         return self.best
 
-    def test(self, func_name, dim_count):
+    def iter_test(self, func_name, dim_count):
+        ''' Runs the PSO algorithm given the initialization
+            parameters, outputting a list of the best values
+            from the run
+        '''
 
+        bests = []
         func = self._funcs[func_name](dim_count)
         self.pop = self.generate_pop(self.size, func)
-
         self.best = min(self.pop)
-        worst = max(self.pop)
-        i = 0
-        while not is_lessthan_eps(self.best.val, worst.val):
-            self.best = min(self.pop)
-            worst = max(self.pop)
+
+        for _ in xrange(self.gen):
             self.pop = [p.map_eval(self.best.position, self.alpha, self.beta) for p in self.pop]
-            i += len(self.pop)
+            self.best = min(self.pop)
+            bests.append(self.best.val)
 
-        self.best = min(self.pop)
-        success = is_success(self.best.val, self.best.func)
-        return (i, success)
+        return np.array(bests)
 
     def _generate_pop(self, size, func):
         ''' initializes our population 
