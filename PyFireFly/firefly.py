@@ -6,7 +6,7 @@ from BIP.Bayes.lhs import lhs
 from scipy.stats import uniform
 from scipy.spatial.distance import euclidean
 from multiprocessing import Pool
-from functions import *
+from functions import Function, max_dist 
 
 def write_coords(filename, pop):
     ''' This function will output the points for each fly in the population 
@@ -28,13 +28,6 @@ class Population:
     CAUCHY = 3
     FAST = 4
     EPSILON = 1e-5
-
-    _funcs = { 'sphere' : Sphere ,
-            'ackley' : Ackley,
-            'michalewicz' : Michalewicz,
-            'rosenbrock' : Rosenbrock,
-            'rastrigin' : Rastrigin,
-            'easom' : Easom}
 
     def __init__(self, gen, size, alpha, beta, gamma):
         ''' Setup sets the initialization parameters 
@@ -142,7 +135,7 @@ class Population:
         '''
 
         # get the objective function
-        func = self._funcs[func_name](dimension_count)
+        func = Function(func_name)(dimension_count)
         
         # create our populations
         self.pop = self._generate_pop(self.size, func)
@@ -234,7 +227,18 @@ class Population:
             iteration
         '''
 
+        #initialize our process pool
+        pool = Pool(processes=cpu_count)
         values = []
+
+        def set_pop(fly):
+            '''weird hack to get the pickled population alpha to be set
+            '''
+            fly.pop = self
+            return fly
+
+        best = min(self.pop)
+        values.append(best.val)
         for i in xrange(2, self.gen + 2):
             #calculate our new alpha value based on the annealing schedule
             self.alpha = schedule(i)
@@ -242,8 +246,12 @@ class Population:
             #copy our population over to old one as well
             self._copy_pop()
 
+            # annoying hack to get around the cached pickle of pop
+            self.pop[:] = [set_pop(fly) for fly in self.pop]
+
             #map our current population to a new one
-            self.pop = [map_fly(fly) for fly in self.pop]
+            self.pop[:] = pool.map(map_fly, self.pop)
+
             best = min(self.pop)
             values.append(best.val)
 

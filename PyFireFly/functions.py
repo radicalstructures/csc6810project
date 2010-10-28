@@ -37,6 +37,20 @@ def is_success_d(best, func, epsilon=0.01):
 
     return euclidean(best, func.xstar) <= epsilon
 
+def Function(name):
+    ''' Easy way to get a function constructor
+        based on its name
+    '''
+
+    funcs = { 'sphere' : Sphere ,
+            'ackley' : Ackley,
+            'michalewicz' : Michalewicz,
+            'rosenbrock' : Rosenbrock,
+            'rastrigin' : Rastrigin,
+            'easom' : Easom}
+
+    return funcs[name]
+
 def Sphere(dim):
     ''' returns the sphere objective function with 
         mins and maxs defined 
@@ -114,7 +128,7 @@ def _rosenbrock(coords):
     ''' rosenbrock function
     '''
 
-    return sum([100.0 * (coords[j]**2.0 - coords[j+1])**2.0 + (coords[j] - 1.0)**2.0 \
+    return sum([(100.0 * (((coords[j]**2.0) - coords[j+1])**2.0)) + (coords[j] - 1.0)**2.0 \
             for j in xrange(len(coords) - 1)])
 
 def _michalewicz(coords):

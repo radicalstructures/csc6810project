@@ -4,7 +4,7 @@
 
 import numpy as np
 import math as m
-from functions import *
+from functions import Function
 from BIP.Bayes.lhs import lhs
 from scipy.stats import uniform
 
@@ -16,12 +16,6 @@ class SA(object):
     CAUCHY = 2
     FAST = 3
 
-    _obj_funcs = { 'sphere' : Sphere ,
-            'ackley' : Ackley,
-            'michalewicz' : Michalewicz,
-            'rosenbrock' : Rosenbrock,
-            'rastrigin' : Rastrigin}
-
     def __init__(self, starting_temp, finish_temp):
         ''' initialize our simulated annealing machine
         '''
@@ -32,7 +26,7 @@ class SA(object):
         ''' initialize our simulated annealing machine
         '''
 
-        objfunc = self._obj_funcs[func_name](dim)
+        objfunc = Function(func_name)(dim)
         schedule = self._get_schedule(style)
         prob = self._get_prob_distr(style)
 
@@ -43,7 +37,7 @@ class SA(object):
         ''' initialize our simulated annealing machine
         '''
 
-        objfunc = self._obj_funcs[func_name](dim)
+        objfunc = Function(func_name)(dim)
         schedule = self._get_schedule(style)
         prob = self._get_prob_distr(style)
 
@@ -57,7 +51,7 @@ class SA(object):
             # keep within bounds
             return maxval if value > maxval else minval if value < minval else value
 
-        seeds = np.array([param * uniform.rvs() for param in params])
+        seeds = np.array([uniform.rvs() - 0.5 for param in params])
         state = np.array([adjust_offset(s + seeds[i], objfunc.mins[i], objfunc.maxs[i]) for i, s in enumerate(state)])
         return state
 
@@ -143,6 +137,7 @@ class SA(object):
         start_val = best_val = objfunc.eval(best)
         t_current = self.t_initial
 
+        bests.append(best_val)
         for _ in range(iterations):
             k_current += 1
             t_current = schedule(k_current)
