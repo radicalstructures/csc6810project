@@ -39,7 +39,7 @@ class SA(object):
         state_final = self._anneal(objfunc, schedule, prob)
         return state_final
 
-    def test(self, func_name, dim, style=BOLTZMANN):
+    def iter_test(self, func_name, dim, iterations, style=BOLTZMANN):
         ''' initialize our simulated annealing machine
         '''
 
@@ -47,8 +47,7 @@ class SA(object):
         schedule = self._get_schedule(style)
         prob = self._get_prob_distr(style)
 
-        state_final = self._test_anneal(objfunc, schedule, prob)
-        return state_final
+        return self._test_anneal(objfunc, schedule, prob, iterations)
 
     def _get_state(self, objfunc, state, params):
         ''' setup the initial state
@@ -128,10 +127,11 @@ class SA(object):
 
         return best
 
-    def _test_anneal(self, objfunc, schedule, probfunc):
+    def _test_anneal(self, objfunc, schedule, probfunc, iterations):
         ''' our actual annealing method
         '''
 
+        bests = []
         k_current = 1
         # get our initial state
         dim = len(objfunc.maxs)
@@ -143,8 +143,7 @@ class SA(object):
         start_val = best_val = objfunc.eval(best)
         t_current = self.t_initial
 
-        while is_lessthan_eps(best_val, start_val):
-            # run until temperature is low enough
+        for _ in range(iterations):
             k_current += 1
             t_current = schedule(k_current)
             state = self._get_state(objfunc, state, [1.0]*dim)
@@ -153,8 +152,9 @@ class SA(object):
             if uniform.rvs() < probfunc(t_current, current_val, best_val, dim):
                 best = state
                 best_val = current_val
+            bests.append(best_val)
 
-        return best
+        return np.array(bests)
 
 
 
