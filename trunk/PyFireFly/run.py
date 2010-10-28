@@ -35,12 +35,12 @@ def test(func_name, dimension_count, iteration_count, sample_count, cpu_count):
             file.write('\n')
 
 def experiment():
-    #test('sphere', 32, 4, 2, 2)
-    #test('ackley', 32, 4, 2, 2)
-    #test('michalewicz', 16, 2, 2, 2)
-    test('rosenbrock', 16, 2, 2, 2)
-    #test('rastrigin', 16, 2, 2, 2)
-    #test('easom', 2, 2, 2, 2)
+    test('sphere', 32, 1000, 10, 2)
+    test('ackley', 32, 1000, 10, 2)
+    test('michalewicz', 16, 1000, 10, 2)
+    test('rosenbrock', 8, 1000, 10, 2)
+    test('rastrigin', 8, 1000, 10, 2)
+    test('easom', 2, 1000, 10, 2)
 
 if __name__ == '__main__':
     experiment()
