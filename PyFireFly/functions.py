@@ -93,7 +93,7 @@ def Easom(dim):
     if dim != 2:
         raise
 
-    return ObjFunc(_easom, [-100.0, -100.0], [100.0, 100.0], [m.pi, m.pi])
+    return ObjFunc(_easom, [-30.0, -30.0], [30.0, 30.0], [m.pi, m.pi])
 
 def _sphere(coords):
     ''' the sphere (sphere) function 
