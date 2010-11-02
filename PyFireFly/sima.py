@@ -99,8 +99,9 @@ class SA(object):
         k_current = 1
         # get our initial state
         dim = len(objfunc.maxs)
-        params = [objfunc.maxs[i] - objfunc.mins[i] for i in xrange(dim)]
-        state = self._get_state(objfunc, [0.0]*dim, params)
+        params = [(objfunc.mins[i], func.maxs[i] - func.mins[i]) for i in xrange(dim)]
+        seeds = np.array(lhs([uniform]*dim, params, 1, True, np.identity(dim))).T[0]
+        state = self._get_state(objfunc, [0.0]*dim, seeds)
         state = [s + objfunc.mins[i] for i, s in enumerate(state)]
 
         best = np.array(state)
@@ -129,8 +130,9 @@ class SA(object):
         k_current = 1
         # get our initial state
         dim = len(objfunc.maxs)
-        params = [objfunc.maxs[i] - objfunc.mins[i] for i in xrange(dim)]
-        state = self._get_state(objfunc, [0.0]*dim, params)
+        params = [(objfunc.mins[i], objfunc.maxs[i] - objfunc.mins[i]) for i in xrange(dim)]
+        seeds = np.array(lhs([uniform]*dim, params, 1, True, np.identity(dim))).T[0]
+        state = self._get_state(objfunc, [0.0]*dim, seeds)
         state = [s + objfunc.mins[i] for i, s in enumerate(state)]
 
         best = np.array(state)
