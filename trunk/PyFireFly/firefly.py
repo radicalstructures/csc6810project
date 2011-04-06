@@ -74,7 +74,6 @@ class Population:
         # run the algorithm
         i = self._test_map_pop(update, cpu_count)
 
-
         # sort the population and return the best
         self.pop.sort()
         success = is_success_f(self.pop[0].val, self.pop[0].func)
@@ -205,7 +204,7 @@ class Population:
             self._copy_pop()
 
             # annoying hack to get around the cached pickle of pop
-            #self.pop[:] = [set_pop(fly) for fly in self.pop]
+            self.pop[:] = [set_pop(fly) for fly in self.pop]
 
             # map our current population to a new one
             self.pop = [map_fly(fly) for fly in self.pop]
@@ -257,11 +256,6 @@ class Population:
 
         return np.array(values)
 
-    def _test_map_pop(self, schedule, cpu_count):
-        ''' runs the optimization until the mean values of change are
-            less than a given epsilon. Returns the amoung of function
-            evaluations 
-        '''
     def _has_converged(self, fly_best, flies, epsilon=0.01, perc=0.3):
         ''' determines if the population has converged or 
             not, ending a test run
